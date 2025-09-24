@@ -49,6 +49,7 @@ A casual-but-capable Better Auth implementation that shows how Convex and React 
 - **✉️ Email preview/dev mode**: Flip one flag to dump verification, Magic Link and Code emails to the console for testing without Resend keys.
 - **⏰ Cron Jobs**: I finally found a reason to dive into the [Cron](https://docs.convex.dev/scheduling/cron-jobs) support of Convex for temporary 24h claim of usernames during verification, so that was pretty neat.
 - **🐣 Easter Egg**: I included a small, but very nerdy easter egg for you to find. I will probably add a env soon to turn it off, alongside the 2FA and data export feature.
+- **🔜 SoonTM**: Will add guidance for production deployment in a few weeks. And of course 2FA as well as export data flows. Probably, maybe.
 
 ## Why 9ui.dev
 
@@ -205,6 +206,9 @@ Note: Client-side values stay in `.env.local`, while server settings are mirrore
    - Re-run `npm run update-envs` whenever you tweak the .env.local to apply the same changes to your Convex deploment.
 
 ## Adapting to Your Own App
+
+> [!NOTE]
+> Deployment to production (e.g. Cloudflare Workers) will be added in a few weeks.
 
 1. Swap `src/components/Counter.tsx` (wired up in `src/App.tsx`) with your own feature component or route tree.
 2. Put any shared schemas or helpers in `shared/<feature>.ts`.
