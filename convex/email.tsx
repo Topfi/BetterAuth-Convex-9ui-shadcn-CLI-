@@ -7,6 +7,7 @@ import { GenericCtx } from "@convex-dev/better-auth";
 import { requireMutationCtx } from "@convex-dev/better-auth/utils";
 import { components } from "./_generated/api";
 import { DataModel } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 import MagicLinkEmail from "./emails/magicLink";
 import ResetPasswordEmail from "./emails/resetPassword";
 import VerifyEmail from "./emails/verifyEmail";
@@ -51,13 +52,19 @@ const dispatchEmail = async ({
     return;
   }
 
-  const runMutation = (() => {
-    if ("runMutation" in ctx && typeof ctx.runMutation === "function") {
-      return ctx.runMutation.bind(ctx);
+  const mutationCtx = (() => {
+    try {
+      return requireMutationCtx(ctx);
+    } catch {
+      if (
+        ctx &&
+        "runMutation" in ctx &&
+        typeof ctx.runMutation === "function"
+      ) {
+        return ctx as MutationCtx; 
+      }
+      throw new Error("Could not establish a valid mutation context.");
     }
-
-    const mutationCtx = requireMutationCtx(ctx);
-    return mutationCtx.runMutation.bind(mutationCtx);
   })();
 
   if (mail.errors.length > 0) {
