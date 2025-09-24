@@ -213,6 +213,10 @@ Note: Client-side values stay in `.env.local`, while server settings are mirrore
 2. Import your repo form Github/Gitlab into Cloudlfare Pages, setting SITE_URL, VITE_CONVEX_URL, VITE_CONVEX_SITE_URL using Framework preset React (Vite).
 3. That's all there is to it.
 
+| Cloudflare                                                    | Convex                                                                | Mail                                                                   |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| ![Cloudflare](./public/CloudflareEnvs.png)           | ![Convex](./public/ConvexEnvs.png)                   | ![Mail](./public/MailVerification.png)    
+
 ## Adapting to Your Own App
 
 1. Swap `src/components/Counter.tsx` (wired up in `src/App.tsx`) with your own feature component or route tree.
