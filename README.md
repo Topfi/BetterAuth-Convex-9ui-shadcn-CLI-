@@ -222,7 +222,7 @@ These steps will guide you towards deploying this repo to production using Cloud
 
 1. Fork this repo and push your changes.
 
-2. In your Cloudflare Dash, go to Compute (Workers)/Workers & Pages → Create application → Pages → Connect to Git, pick your GitHub repo and the branch.
+2. In your Cloudflare Dash, go to Compute (Workers)/Workers & Pages, click on Create application, select Pages, then Connect to Git, pick your GitHub repo and the branch.
    - Framework preset: Vite (React)
    - Build command: `npm run build`
    - Build output directory: `dist`.
