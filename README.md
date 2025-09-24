@@ -204,19 +204,6 @@ Note: Client-side values stay in `.env.local`, while server settings are mirrore
    - The app now runs at `http://localhost:5173`.
    - Re-run `npm run update-envs` whenever you tweak the .env.local to apply the same changes to your Convex deploment.
 
-## Quick and dirty Setup on Cloudflare Pages
-
-> [!NOTE]
-> I'll make this more extensive, maybe add a video/screenshots, but this is all you need to do. I just checked, takes less than 10 min to get to prod.
-
-1. Set envs in your Convex prod deployment.
-2. Import your repo form Github/Gitlab into Cloudlfare Pages, setting SITE_URL, VITE_CONVEX_URL, VITE_CONVEX_SITE_URL using Framework preset React (Vite).
-3. That's all there is to it.
-
-| Cloudflare                                                    | Convex                                                                | Mail                                                                   |
-| --------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| ![Cloudflare](./public/CloudflareEnvs.png)           | ![Convex](./public/ConvexEnvs.png)                   | ![Mail](./public/MailVerification.png)    
-
 ## Adapting to Your Own App
 
 1. Swap `src/components/Counter.tsx` (wired up in `src/App.tsx`) with your own feature component or route tree.
@@ -224,6 +211,55 @@ Note: Client-side values stay in `.env.local`, while server settings are mirrore
 3. Build UI with primitives from `src/components/ui`.
 
 Follow these steps and you can drop in a bespoke React surface without disturbing authentication or Convex wiring.
+
+## Production Deploment using Cloudflare Pages and Resend
+
+| Cloudflare                                                    | Convex                                                                | Mail                                                                   |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| ![Cloudflare](./public/CloudflareEnvs.png)           | ![Convex](./public/ConvexEnvs.png)                   | ![Mail](./public/MailVerification.png)    
+
+These steps will guide you towards deploying this repo to production using Cloudflare Pages and Convex for mail auth, OTP, etc.
+
+1. Fork this repo and push your changes.
+
+2. In your Cloudflare Dash, go to Compute (Workers)/Workers & Pages → Create application → Pages → Connect to Git, pick your GitHub repo and the branch.
+   - Framework preset: Vite (React)
+   - Build command: `npm run build`
+   - Build output directory: `dist`.
+
+3. Next, set your domain. Under Custom domains, add your production domain (for example `app.yourdomain.com`) and finish the DNS setup so the domain becomes Active.
+
+5. In your Convex deployment, create a Production deployment for your project. You can click on the button in the browser or use the CLI, whatever floats your boat.
+   Copy both URLs:
+
+   - Deployment URL (ends with `.convex.cloud`)
+   - Site URL (ends with `.convex.site`)
+
+7. In your Cloudflare Pages deployment, add these variables:
+
+   - `VITE_CONVEX_URL` = your Convex Deployment URL (`https://...convex.cloud`)
+   - `VITE_CONVEX_SITE_URL` = your Convex Site URL (`https://...convex.site`)
+   - `VITE_SITE_URL` = your custom domain URL (`https://app.yourdomain.com`)
+   - `SITE_URL` = same as above (`https://app.yourdomain.com`)
+
+8. Create your Resend account at [https://resend.com](https://resend.com). In Resend, head to Domains, add your domain (for example `yourdomain.com`). Add the DNS records they provide at your DNS host (Cloudflare or wherever your DNS lives; if you use Cloudflare this is only one click amazingly) then wait until the domain status is shown as Verified.
+
+9. In Resend, head to API Keys, create a Production API key and copy it once, setting it to only Send and use your newly verified domain. Choose or add a sender address under your verified domain, for example `onboarding@yourdomain.com`. This exact email will be your `MAIL_FROM`.
+
+10. In your Convex prod deployment, add these server-side variables:
+
+   - `RESEND_API_KEY` = your Resend production API key
+   - `MAIL_FROM` = your verified address, for example `onboarding@yourdomain.com`
+   - `MAIL_CONSOLE_PREVIEW` = `false`
+   - `BETTER_AUTH_SECRET` = a long random string (generate one using base64; do not reuse between environments)
+
+11. Still in your Convex env vars, disable social logins you are not using by setting them to `false` (e.g. `GITHUB_OAUTH=false`, `GOOGLE_OAUTH=false`, `APPLE_OAUTH=false`), or configure them fully if you plan to use them.
+
+12. In the Cloudflare Pages page for your project, head to Deployments, trigger a new deployment (push a commit or click Retry deployment). Wait until the build completes.
+
+13. At your domain, run the email flow (sign up, magic link, password reset, etc.) to confirm emails are delivered. If no email arrives, recheck that your Resend domain is Verified, the `MAIL_FROM` matches that verified domain, `MAIL_CONSOLE_PREVIEW` is set to `false` and the `RESEND_API_KEY` is set in Convex Production (not in Cloudflare).
+
+14. If you have Convex issues, recheck that `VITE_CONVEX_URL` and `VITE_CONVEX_SITE_URL` in Cloudflare Pages exactly match your Convex Production URLs, and that `VITE_SITE_URL`/`SITE_URL` match your custom domain. Don't forget `https://`.
 
 ### Helpful Scripts
 
