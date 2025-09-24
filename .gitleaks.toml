@@ -1,0 +1,10 @@
+title = "repo-gitleaks"
+redact = true
+[allowlist]
+  description = "allow common false-positives"
+  regexes = [
+    '''(?i)example\.com''',
+    '''(?i)localhost''',
+    '''(?i)convex\.cloud''',
+    '''(?i)convex\.site'''
+  ]
