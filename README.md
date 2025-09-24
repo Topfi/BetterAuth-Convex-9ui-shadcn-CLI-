@@ -49,7 +49,6 @@ A casual-but-capable Better Auth implementation that shows how Convex and React 
 - **✉️ Email preview/dev mode**: Flip one flag to dump verification, Magic Link and Code emails to the console for testing without Resend keys.
 - **⏰ Cron Jobs**: I finally found a reason to dive into the [Cron](https://docs.convex.dev/scheduling/cron-jobs) support of Convex for temporary 24h claim of usernames during verification, so that was pretty neat.
 - **🐣 Easter Egg**: I included a small, but very nerdy easter egg for you to find. I will probably add a env soon to turn it off, alongside the 2FA and data export feature.
-- **🔜 SoonTM**: Will add guidance for production deployment in a few weeks. And of course 2FA as well as export data flows. Probably, maybe.
 
 ## Why 9ui.dev
 
@@ -81,7 +80,7 @@ Yes, Better Auth is new and that will, worringly, always attract me to some exte
 - Resend API key if you want to send real mail (optional in development).
 - OTP API key if you want to use Google, Github or Apple OAuth.
 
-### Setup
+### Setup for Development
 
 1. Bootstrap dependencies, Convex metadata, and `.env.local` defaults:
 
@@ -205,10 +204,16 @@ Note: Client-side values stay in `.env.local`, while server settings are mirrore
    - The app now runs at `http://localhost:5173`.
    - Re-run `npm run update-envs` whenever you tweak the .env.local to apply the same changes to your Convex deploment.
 
-## Adapting to Your Own App
+## Quick and dirty Setup on Cloudflare Pages
 
 > [!NOTE]
-> Deployment to production (e.g. Cloudflare Workers) will be added in a few weeks.
+> I'll make this more extensive, maybe add a video/screenshots, but this is all you need to do. I just checked, takes less than 10 min to get to prod.
+
+1. Set envs in your Convex prod deployment.
+2. Import your repo form Github/Gitlab into Cloudlfare Pages, setting SITE_URL, VITE_CONVEX_URL, VITE_CONVEX_SITE_URL using Framework preset React (Vite).
+3. That's all there is to it.
+
+## Adapting to Your Own App
 
 1. Swap `src/components/Counter.tsx` (wired up in `src/App.tsx`) with your own feature component or route tree.
 2. Put any shared schemas or helpers in `shared/<feature>.ts`.
