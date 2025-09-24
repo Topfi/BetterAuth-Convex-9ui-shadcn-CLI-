@@ -51,7 +51,14 @@ const dispatchEmail = async ({
     return;
   }
 
-  const mutationCtx = requireMutationCtx(ctx);
+  const runMutation = (() => {
+    if ("runMutation" in ctx && typeof ctx.runMutation === "function") {
+      return ctx.runMutation.bind(ctx);
+    }
+
+    const mutationCtx = requireMutationCtx(ctx);
+    return mutationCtx.runMutation.bind(mutationCtx);
+  })();
 
   if (mail.errors.length > 0) {
     throw new Error(`Mail configuration invalid: ${mail.errors.join(" | ")}`);
