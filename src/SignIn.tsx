@@ -33,6 +33,7 @@ import { pickIdentityPreviewSample } from "../shared/identity";
 import { PublicPageShell } from "@/components/PublicPageShell";
 import { PassphraseInput } from "@/components/PassphraseInput";
 import { resolveVerificationSuccessUrl } from "@/lib/verification";
+import { cn } from "@/lib/utils";
 
 const EMPTY_SOCIAL_ERRORS: readonly string[] = [];
 const PENDING_VERIFICATION_MESSAGE =
@@ -65,6 +66,14 @@ export default function SignIn() {
   const verificationSuccessUrl = resolveVerificationSuccessUrl();
 
   const config = useQuery(api.config.publicConfig);
+  const passphraseSignInEnabled = config?.passphraseSignIn === true;
+  const passphraseSignUpEnabled = config?.passphraseSignUp === true;
+  const magicLinkSignInEnabled = config?.magicLinkSignIn !== false;
+  const verificationCodeSignInEnabled =
+    config?.verificationCodeSignIn !== false;
+  const passwordlessEnabled =
+    magicLinkSignInEnabled || verificationCodeSignInEnabled;
+  const emailSignInEnabled = passphraseSignInEnabled || passwordlessEnabled;
   const githubEnabled = config?.githubOAuth ?? false;
   const githubErrors = config?.githubErrors ?? EMPTY_SOCIAL_ERRORS;
   const hasGithubErrors = githubEnabled && githubErrors.length > 0;
@@ -79,6 +88,21 @@ export default function SignIn() {
   const shownGoogleErrorsRef = useRef<Set<string>>(new Set());
   const shownAppleErrorsRef = useRef<Set<string>>(new Set());
   const emailValue = form.watch("email");
+
+  useEffect(() => {
+    if (!passphraseSignInEnabled && signInMethod === "password") {
+      setSignInMethod(passwordlessEnabled ? "passwordless" : "password");
+    } else if (!passwordlessEnabled && signInMethod === "passwordless") {
+      setSignInMethod(passphraseSignInEnabled ? "password" : "passwordless");
+    }
+  }, [passphraseSignInEnabled, passwordlessEnabled, signInMethod]);
+
+  useEffect(() => {
+    if (!verificationCodeSignInEnabled) {
+      setOtp("");
+      setOtpSent(false);
+    }
+  }, [verificationCodeSignInEnabled]);
 
   useEffect(() => {
     const shown = shownGithubErrorsRef.current;
@@ -146,8 +170,24 @@ export default function SignIn() {
     ? `Apple sign-in unavailable: ${appleErrors.join(", ")}`
     : "Sign in with Apple";
   const appleButtonTitle = hasAppleErrors ? appleButtonLabel : undefined;
+  const passwordlessButtonCount =
+    (magicLinkSignInEnabled ? 1 : 0) + (verificationCodeSignInEnabled ? 1 : 0);
+  const passwordlessGridClass = cn(
+    "grid gap-3",
+    passwordlessButtonCount > 1 ? "sm:grid-cols-2" : undefined,
+  );
+  const canToggleMethod = passphraseSignInEnabled && passwordlessEnabled;
+  const passwordlessToggleLabel =
+    passwordlessButtonCount > 1
+      ? "Use a magic link or verification code instead"
+      : magicLinkSignInEnabled
+        ? "Use a magic link instead"
+        : "Use a verification code instead";
 
   const submitPassphrase = form.handleSubmit(async (values) => {
+    if (!passphraseSignInEnabled) {
+      return;
+    }
     form.clearErrors();
     let handledUnverified = false;
     const { error: signInError } = await authClient.signIn.email(values, {
@@ -209,6 +249,9 @@ export default function SignIn() {
   };
 
   const handleMagicLinkSignIn = async () => {
+    if (!magicLinkSignInEnabled) {
+      return;
+    }
     const isEmailValid = await form.trigger("email");
     if (!isEmailValid) {
       form.setFocus("email");
@@ -317,6 +360,9 @@ export default function SignIn() {
   };
 
   const handleOtpSignIn = async () => {
+    if (!verificationCodeSignInEnabled) {
+      return;
+    }
     const isEmailValid = await form.trigger("email");
     if (!isEmailValid) {
       form.setFocus("email");
@@ -380,86 +426,43 @@ export default function SignIn() {
               Welcome back
             </CardTitle>
             <CardDescription className="text-lg text-muted-foreground">
-              Sign in with your email to receive a magic link or verification
-              code. Alternatively, use a passphrase or OAuth.
+              Sign in with your email using the methods enabled for your
+              workspace.
             </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-6">
-            <Form {...form}>
-              <form
-                className="space-y-6"
-                noValidate
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  if (signInMethod === "password") {
-                    void submitPassphrase();
-                    return;
-                  }
-                  if (otpSent) {
-                    void handleOtpSignIn();
-                  }
-                }}
-              >
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field, fieldState }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel htmlFor="email">Email</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            id="email"
-                            type="email"
-                            placeholder={`e.g. ${identitySample.email}`}
-                            required
-                            autoComplete="email"
-                            aria-invalid={
-                              fieldState.invalid ? "true" : undefined
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {signInMethod === "password" && (
+            {emailSignInEnabled ? (
+              <Form {...form}>
+                <form
+                  className="space-y-6"
+                  noValidate
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    if (signInMethod === "password") {
+                      void submitPassphrase();
+                      return;
+                    }
+                    if (otpSent) {
+                      void handleOtpSignIn();
+                    }
+                  }}
+                >
+                  <div className="space-y-4">
                     <FormField
                       control={form.control}
-                      name="password"
+                      name="email"
                       render={({ field, fieldState }) => (
-                        <FormItem className="space-y-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <FormLabel htmlFor="password">Passphrase</FormLabel>
-                            <Button
-                              type="button"
-                              variant="link"
-                              size="sm"
-                              className="px-0"
-                              disabled={forgotLoading || !emailValue}
-                              onClick={() => {
-                                void handleResetPassword();
-                              }}
-                            >
-                              {forgotLoading ? (
-                                <Loader2
-                                  className="mr-1 size-3 animate-spin"
-                                  aria-hidden
-                                />
-                              ) : null}
-                              Forgot?
-                            </Button>
-                          </div>
+                        <FormItem className="space-y-2">
+                          <FormLabel htmlFor="email">Email</FormLabel>
                           <FormControl>
-                            <PassphraseInput
+                            <Input
                               {...field}
-                              id="password"
-                              placeholder="Passphrase"
-                              autoComplete="current-password"
+                              id="email"
+                              type="email"
+                              placeholder={`e.g. ${identitySample.email}`}
                               required
+                              autoComplete="email"
                               aria-invalid={
                                 fieldState.invalid ? "true" : undefined
                               }
@@ -469,71 +472,82 @@ export default function SignIn() {
                         </FormItem>
                       )}
                     />
-                  )}
 
-                  {signInMethod === "passwordless" && otpSent && (
-                    <div className="space-y-2">
-                      <Label htmlFor="otp">Verification code</Label>
-                      <Input
-                        id="otp"
-                        type="text"
-                        placeholder="Enter verification code"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        maxLength={6}
-                        required
-                        value={otp}
-                        onChange={(event) => {
-                          setOtp(event.target.value);
-                        }}
+                    {passphraseSignInEnabled && signInMethod === "password" ? (
+                      <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field, fieldState }) => (
+                          <FormItem className="space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <FormLabel htmlFor="password">
+                                Passphrase
+                              </FormLabel>
+                              <Button
+                                type="button"
+                                variant="link"
+                                size="sm"
+                                className="px-0"
+                                disabled={forgotLoading || !emailValue}
+                                onClick={() => {
+                                  void handleResetPassword();
+                                }}
+                              >
+                                {forgotLoading ? (
+                                  <Loader2
+                                    className="mr-1 size-3 animate-spin"
+                                    aria-hidden
+                                  />
+                                ) : null}
+                                Forgot?
+                              </Button>
+                            </div>
+                            <FormControl>
+                              <PassphraseInput
+                                {...field}
+                                id="password"
+                                placeholder="Passphrase"
+                                autoComplete="current-password"
+                                required
+                                aria-invalid={
+                                  fieldState.invalid ? "true" : undefined
+                                }
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </div>
-                  )}
-                </div>
+                    ) : null}
 
-                <div className="space-y-3">
-                  {signInMethod === "password" && (
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={otpLoading}
-                    >
-                      {otpLoading ? (
-                        <Loader2
-                          className="mr-2 size-4 animate-spin"
-                          aria-hidden
+                    {signInMethod === "passwordless" &&
+                    otpSent &&
+                    verificationCodeSignInEnabled ? (
+                      <div className="space-y-2">
+                        <Label htmlFor="otp">Verification code</Label>
+                        <Input
+                          id="otp"
+                          type="text"
+                          placeholder="Enter verification code"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
+                          required
+                          value={otp}
+                          onChange={(event) => {
+                            setOtp(event.target.value);
+                          }}
                         />
-                      ) : null}
-                      Sign in with passphrase
-                    </Button>
-                  )}
+                      </div>
+                    ) : null}
+                  </div>
 
-                  {signInMethod === "passwordless" && !otpSent && (
-                    <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-3">
+                    {passphraseSignInEnabled && signInMethod === "password" ? (
                       <Button
-                        type="button"
+                        type="submit"
                         className="w-full"
-                        disabled={magicLinkLoading || otpLoading}
-                        onClick={() => {
-                          void handleMagicLinkSignIn();
-                        }}
-                      >
-                        {magicLinkLoading ? (
-                          <Loader2
-                            className="mr-2 size-4 animate-spin"
-                            aria-hidden
-                          />
-                        ) : null}
-                        Send magic link
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full"
-                        disabled={magicLinkLoading || otpLoading}
-                        onClick={() => {
-                          void handleOtpSignIn();
-                        }}
+                        disabled={otpLoading}
                       >
                         {otpLoading ? (
                           <Loader2
@@ -541,50 +555,103 @@ export default function SignIn() {
                             aria-hidden
                           />
                         ) : null}
-                        Send verification code
+                        Sign in with passphrase
                       </Button>
-                    </div>
-                  )}
+                    ) : null}
 
-                  {signInMethod === "passwordless" && otpSent && (
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={otpLoading}
-                    >
-                      {otpLoading ? (
-                        <Loader2
-                          className="mr-2 size-4 animate-spin"
-                          aria-hidden
-                        />
-                      ) : null}
-                      Verify code
-                    </Button>
-                  )}
+                    {signInMethod === "passwordless" &&
+                    !otpSent &&
+                    passwordlessEnabled ? (
+                      <div className={passwordlessGridClass}>
+                        {magicLinkSignInEnabled ? (
+                          <Button
+                            type="button"
+                            className="w-full"
+                            disabled={magicLinkLoading || otpLoading}
+                            onClick={() => {
+                              void handleMagicLinkSignIn();
+                            }}
+                          >
+                            {magicLinkLoading ? (
+                              <Loader2
+                                className="mr-2 size-4 animate-spin"
+                                aria-hidden
+                              />
+                            ) : null}
+                            Send magic link
+                          </Button>
+                        ) : null}
+                        {verificationCodeSignInEnabled ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            disabled={magicLinkLoading || otpLoading}
+                            onClick={() => {
+                              void handleOtpSignIn();
+                            }}
+                          >
+                            {otpLoading ? (
+                              <Loader2
+                                className="mr-2 size-4 animate-spin"
+                                aria-hidden
+                              />
+                            ) : null}
+                            Send verification code
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
 
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="w-full"
-                    onClick={() => {
-                      const nextMethod =
-                        signInMethod === "password"
-                          ? "passwordless"
-                          : "password";
-                      setSignInMethod(nextMethod);
-                      form.resetField("password", { defaultValue: "" });
-                      form.clearErrors("password");
-                      setOtp("");
-                      setOtpSent(false);
-                    }}
-                  >
-                    {signInMethod === "password"
-                      ? "Use a magic link or verification code instead"
-                      : "Use a passphrase instead"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
+                    {signInMethod === "passwordless" &&
+                    otpSent &&
+                    verificationCodeSignInEnabled ? (
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={otpLoading}
+                      >
+                        {otpLoading ? (
+                          <Loader2
+                            className="mr-2 size-4 animate-spin"
+                            aria-hidden
+                          />
+                        ) : null}
+                        Verify code
+                      </Button>
+                    ) : null}
+
+                    {canToggleMethod ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="w-full"
+                        onClick={() => {
+                          const nextMethod =
+                            signInMethod === "password"
+                              ? "passwordless"
+                              : "password";
+                          setSignInMethod(nextMethod);
+                          form.resetField("password", { defaultValue: "" });
+                          form.clearErrors("password");
+                          setOtp("");
+                          setOtpSent(false);
+                        }}
+                      >
+                        {signInMethod === "password"
+                          ? passwordlessToggleLabel
+                          : "Use a passphrase instead"}
+                      </Button>
+                    ) : null}
+                  </div>
+                </form>
+              </Form>
+            ) : (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                Email-based sign-in is currently disabled. Use the options below
+                or contact support for help.
+              </div>
+            )}
 
             {hasAnySocial ? (
               <div className="space-y-3">
@@ -698,12 +765,14 @@ export default function SignIn() {
               .
             </p>
 
-            <p className="text-center text-sm text-muted-foreground">
-              Don&apos;t have an account?{" "}
-              <Button type="button" variant="link" className="px-0" asChild>
-                <Link to="/sign-up">Create one</Link>
-              </Button>
-            </p>
+            {passphraseSignUpEnabled ? (
+              <p className="text-center text-sm text-muted-foreground">
+                Don&apos;t have an account?{" "}
+                <Button type="button" variant="link" className="px-0" asChild>
+                  <Link to="/sign-up">Create one</Link>
+                </Button>
+              </p>
+            ) : null}
           </CardFooter>
         </Card>
       </div>

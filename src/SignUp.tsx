@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useConvexAuth, useMutation } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -96,6 +96,9 @@ export default function SignUp() {
     0,
     Math.min(100, (passphraseEvaluation.score / 4) * 100),
   );
+  const config = useQuery(api.config.publicConfig);
+  const passphraseSignUpEnabled = config?.passphraseSignUp === true;
+  const featureConfigReady = config !== undefined;
 
   useEffect(() => {
     if (isLoading) {
@@ -107,6 +110,9 @@ export default function SignUp() {
   }, [isAuthenticated, isLoading, navigate]);
 
   const submitSignUp = form.handleSubmit(async (values) => {
+    if (!passphraseSignUpEnabled) {
+      return;
+    }
     form.clearErrors();
 
     try {
@@ -243,263 +249,277 @@ export default function SignUp() {
           </CardHeader>
 
           <CardContent>
-            <Form {...form}>
-              <form className="grid gap-6" noValidate onSubmit={submitSignUp}>
-                {/* Username + Email in one aligned row; username helper on its own line below */}
-                <div className="grid gap-4 sm:grid-cols-2 items-start">
-                  <FormField
-                    control={form.control}
-                    name="username"
-                    render={({ field, fieldState }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel htmlFor="username">Username</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            id="username"
-                            placeholder={`e.g. ${identitySample.username}`}
-                            autoComplete="off"
-                            autoCapitalize="none"
-                            aria-describedby="username-help"
-                            aria-invalid={
-                              fieldState.invalid ? "true" : undefined
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field, fieldState }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel htmlFor="email">Email</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            id="email"
-                            type="email"
-                            placeholder={`e.g. ${identitySample.email}`}
-                            required
-                            autoComplete="email"
-                            aria-invalid={
-                              fieldState.invalid ? "true" : undefined
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  {/* Username helper line lives below username input without affecting email column */}
-                  <div className="sm:col-span-1">
-                    <p
-                      id="username-help"
-                      className="text-xs text-muted-foreground"
-                    >
-                      Letters and digits only, 3–32 characters.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field, fieldState }) => (
-                      <FormItem className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <FormLabel htmlFor="password">Passphrase</FormLabel>
-                          <Button
-                            type="button"
-                            variant="link"
-                            className="h-auto px-0 py-0 text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
-                            onClick={async () => {
-                              try {
-                                const generated = generatePassphrase(24);
-                                form.setValue("password", generated, {
-                                  shouldDirty: true,
-                                  shouldValidate: true,
-                                });
-                                form.setValue(
-                                  "passwordConfirmation",
-                                  generated,
-                                  {
-                                    shouldDirty: true,
-                                    shouldValidate: true,
-                                  },
-                                );
-                                await copyPassphraseToClipboard(generated);
-                                toast.info(
-                                  "Generated passphrase copied to your clipboard.",
-                                );
-                              } catch {
-                                // Silent failure per requirements.
-                              }
-                            }}
-                          >
-                            Generate
-                          </Button>
-                        </div>
-                        <FormControl>
-                          <PassphraseInput
-                            {...field}
-                            id="password"
-                            placeholder="Passphrase"
-                            autoComplete="new-password"
-                            required
-                            aria-invalid={
-                              fieldState.invalid ? "true" : undefined
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="passwordConfirmation"
-                    render={({ field, fieldState }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel htmlFor="password-confirmation">
-                          Confirm passphrase
-                        </FormLabel>
-                        <FormControl>
-                          <PassphraseInput
-                            {...field}
-                            id="password-confirmation"
-                            placeholder="Confirm passphrase"
-                            autoComplete="new-password"
-                            required
-                            aria-invalid={
-                              fieldState.invalid ? "true" : undefined
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="sm:col-span-2 space-y-2">
-                    <div className="text-xs text-muted-foreground">
-                      At least 8 characters; we block weak or breached
-                      passphrases automatically.
-                    </div>
-                    <div
-                      role="status"
-                      aria-live="polite"
-                      className="-mx-6 px-6"
-                      data-strength-score={passphraseEvaluation.score}
-                    >
-                      <div className="h-1 w-full rounded-full bg-muted">
-                        <div
-                          aria-hidden="true"
-                          className={strengthBarClass}
-                          style={{ width: `${strengthPercentage}%` }}
-                        />
-                      </div>
-                      <span className="sr-only">
-                        Passphrase strength: {passphraseStrengthLabel}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="image"
-                  render={({ field, fieldState }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel htmlFor="image">
-                        Profile image (optional)
-                      </FormLabel>
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                        <Avatar className="size-20 border">
-                          {imagePreview ? (
-                            <AvatarImage
-                              src={imagePreview}
-                              alt="Profile preview"
-                            />
-                          ) : (
-                            <AvatarFallback className="bg-muted text-xs text-muted-foreground">
-                              {profileInitials}
-                            </AvatarFallback>
-                          )}
-                        </Avatar>
-                        <div className="flex flex-col gap-3 sm:flex-1">
+            {!featureConfigReady ? (
+              <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+                Loading sign-up options…
+              </div>
+            ) : passphraseSignUpEnabled ? (
+              <Form {...form}>
+                <form className="grid gap-6" noValidate onSubmit={submitSignUp}>
+                  {/* Username + Email in one aligned row; username helper on its own line below */}
+                  <div className="grid gap-4 sm:grid-cols-2 items-start">
+                    <FormField
+                      control={form.control}
+                      name="username"
+                      render={({ field, fieldState }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel htmlFor="username">Username</FormLabel>
                           <FormControl>
                             <Input
-                              id="image"
-                              type="file"
-                              accept="image/*"
-                              aria-describedby="image-helper"
-                              onBlur={field.onBlur}
-                              ref={field.ref}
+                              {...field}
+                              id="username"
+                              placeholder={`e.g. ${identitySample.username}`}
+                              autoComplete="off"
+                              autoCapitalize="none"
+                              aria-describedby="username-help"
                               aria-invalid={
                                 fieldState.invalid ? "true" : undefined
                               }
-                              onChange={(event) => {
-                                const file = event.target.files?.[0] ?? null;
-                                field.onChange(file);
-                                if (
-                                  file &&
-                                  ["image/png", "image/jpeg"].includes(
-                                    file.type,
-                                  )
-                                ) {
-                                  const reader = new FileReader();
-                                  reader.onloadend = () => {
-                                    setImagePreview(reader.result as string);
-                                  };
-                                  reader.readAsDataURL(file);
-                                } else {
-                                  setImagePreview(null);
-                                }
-                                event.target.value = "";
-                                void form.trigger("image");
-                              }}
                             />
                           </FormControl>
-                          <FormDescription
-                            id="image-helper"
-                            className="text-xs text-muted-foreground"
-                          >
-                            PNG or JPEG up to 5 MB.
-                          </FormDescription>
-                        </div>
-                        {imagePreview ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Remove selected profile image"
-                            onClick={() => {
-                              field.onChange(null);
-                              setImagePreview(null);
-                              void form.trigger("image");
-                            }}
-                          >
-                            <X className="size-4" aria-hidden />
-                          </Button>
-                        ) : null}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field, fieldState }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel htmlFor="email">Email</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              id="email"
+                              type="email"
+                              placeholder={`e.g. ${identitySample.email}`}
+                              required
+                              autoComplete="email"
+                              aria-invalid={
+                                fieldState.invalid ? "true" : undefined
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    {/* Username helper line lives below username input without affecting email column */}
+                    <div className="sm:col-span-1">
+                      <p
+                        id="username-help"
+                        className="text-xs text-muted-foreground"
+                      >
+                        Letters and digits only, 3–32 characters.
+                      </p>
+                    </div>
+                  </div>
 
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
-                  ) : null}
-                  Create account
-                </Button>
-              </form>
-            </Form>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field, fieldState }) => (
+                        <FormItem className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <FormLabel htmlFor="password">Passphrase</FormLabel>
+                            <Button
+                              type="button"
+                              variant="link"
+                              className="h-auto px-0 py-0 text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                              onClick={async () => {
+                                try {
+                                  const generated = generatePassphrase(24);
+                                  form.setValue("password", generated, {
+                                    shouldDirty: true,
+                                    shouldValidate: true,
+                                  });
+                                  form.setValue(
+                                    "passwordConfirmation",
+                                    generated,
+                                    {
+                                      shouldDirty: true,
+                                      shouldValidate: true,
+                                    },
+                                  );
+                                  await copyPassphraseToClipboard(generated);
+                                  toast.info(
+                                    "Generated passphrase copied to your clipboard.",
+                                  );
+                                } catch {
+                                  // Silent failure per requirements.
+                                }
+                              }}
+                            >
+                              Generate
+                            </Button>
+                          </div>
+                          <FormControl>
+                            <PassphraseInput
+                              {...field}
+                              id="password"
+                              placeholder="Passphrase"
+                              autoComplete="new-password"
+                              required
+                              aria-invalid={
+                                fieldState.invalid ? "true" : undefined
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="passwordConfirmation"
+                      render={({ field, fieldState }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel htmlFor="password-confirmation">
+                            Confirm passphrase
+                          </FormLabel>
+                          <FormControl>
+                            <PassphraseInput
+                              {...field}
+                              id="password-confirmation"
+                              placeholder="Confirm passphrase"
+                              autoComplete="new-password"
+                              required
+                              aria-invalid={
+                                fieldState.invalid ? "true" : undefined
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="sm:col-span-2 space-y-2">
+                      <div className="text-xs text-muted-foreground">
+                        At least 8 characters; we block weak or breached
+                        passphrases automatically.
+                      </div>
+                      <div
+                        role="status"
+                        aria-live="polite"
+                        className="-mx-6 px-6"
+                        data-strength-score={passphraseEvaluation.score}
+                      >
+                        <div className="h-1 w-full rounded-full bg-muted">
+                          <div
+                            aria-hidden="true"
+                            className={strengthBarClass}
+                            style={{ width: `${strengthPercentage}%` }}
+                          />
+                        </div>
+                        <span className="sr-only">
+                          Passphrase strength: {passphraseStrengthLabel}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="image"
+                    render={({ field, fieldState }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel htmlFor="image">
+                          Profile image (optional)
+                        </FormLabel>
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                          <Avatar className="size-20 border">
+                            {imagePreview ? (
+                              <AvatarImage
+                                src={imagePreview}
+                                alt="Profile preview"
+                              />
+                            ) : (
+                              <AvatarFallback className="bg-muted text-xs text-muted-foreground">
+                                {profileInitials}
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                          <div className="flex flex-col gap-3 sm:flex-1">
+                            <FormControl>
+                              <Input
+                                id="image"
+                                type="file"
+                                accept="image/*"
+                                aria-describedby="image-helper"
+                                onBlur={field.onBlur}
+                                ref={field.ref}
+                                aria-invalid={
+                                  fieldState.invalid ? "true" : undefined
+                                }
+                                onChange={(event) => {
+                                  const file = event.target.files?.[0] ?? null;
+                                  field.onChange(file);
+                                  if (
+                                    file &&
+                                    ["image/png", "image/jpeg"].includes(
+                                      file.type,
+                                    )
+                                  ) {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                      setImagePreview(reader.result as string);
+                                    };
+                                    reader.readAsDataURL(file);
+                                  } else {
+                                    setImagePreview(null);
+                                  }
+                                  event.target.value = "";
+                                  void form.trigger("image");
+                                }}
+                              />
+                            </FormControl>
+                            <FormDescription
+                              id="image-helper"
+                              className="text-xs text-muted-foreground"
+                            >
+                              PNG or JPEG up to 5 MB.
+                            </FormDescription>
+                          </div>
+                          {imagePreview ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Remove selected profile image"
+                              onClick={() => {
+                                field.onChange(null);
+                                setImagePreview(null);
+                                void form.trigger("image");
+                              }}
+                            >
+                              <X className="size-4" aria-hidden />
+                            </Button>
+                          ) : null}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? (
+                      <Loader2
+                        className="mr-2 size-4 animate-spin"
+                        aria-hidden
+                      />
+                    ) : null}
+                    Create account
+                  </Button>
+                </form>
+              </Form>
+            ) : (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                Sign up is currently disabled.
+              </div>
+            )}
           </CardContent>
 
           <CardFooter className="flex flex-col gap-4">

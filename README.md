@@ -162,6 +162,13 @@ APPLE_CLIENT_SECRET=
 # Example: com.example.yourapp
 APPLE_APP_BUNDLE_IDENTIFIER=
 
+# Email/password auth feature toggles. Accepts true/false (case-insensitive) and defaults to true when omitted.
+# Example: true
+AUTH_PASSPHRASE_SIGN_IN=true
+AUTH_PASSPHRASE_SIGN_UP=true
+AUTH_MAGIC_LINK_SIGN_IN=true
+AUTH_VERIFICATION_CODE_SIGN_IN=true
+
 # Mail preview toggle. `true` logs emails to the console; `false` sends via Resend.
 # Example: true
 MAIL_CONSOLE_PREVIEW=true
@@ -251,7 +258,7 @@ These steps will guide you towards deploying this repo to production using Cloud
 - `MAIL_CONSOLE_PREVIEW` = `false`
 - `BETTER_AUTH_SECRET` = a long random string (generate one using base64; do not reuse between environments)
 
-11. Still in your Convex env vars, disable social logins you are not using by setting them to `false` (e.g. `GITHUB_OAUTH=false`, `GOOGLE_OAUTH=false`, `APPLE_OAUTH=false`), or configure them fully if you plan to use them.
+11. Still in your Convex env vars, disable social logins you are not using by setting them to `false` (e.g. `GITHUB_OAUTH=false`, `GOOGLE_OAUTH=false`, `APPLE_OAUTH=false`), or configure them fully if you plan to use them. Use the `AUTH_*` toggles to gate passphrase, magic link, and verification code flows; they accept true/false (case-insensitive) and default to `true` when omitted.
 
 12. In the Cloudflare Pages page for your project, head to Deployments, trigger a new deployment (push a commit or click Retry deployment). Wait until the build completes.
 
@@ -268,32 +275,36 @@ These steps will guide you towards deploying this repo to production using Cloud
 
 ## Environment Reference
 
-| Variable                         | Scope          | Purpose                                                                                            |
-| -------------------------------- | -------------- | -------------------------------------------------------------------------------------------------- |
-| `CONVEX_DEPLOYMENT`              | Local + Convex | Links the repo to the correct Convex deployment slug so CLI commands target the right environment. |
-| `CONVEX_SITE_URL`                | Convex         | Public `.site` domain Convex issues; Better Auth uses it for middleware callbacks.                 |
-| `VITE_CONVEX_URL`                | Local          | Browser-consumable Convex endpoint used by the client SDK for queries and mutations.               |
-| `VITE_CONVEX_SITE_URL`           | Local          | Mirrors `CONVEX_SITE_URL` for the browser so auth flows can reach Convex-hosted routes.            |
-| `VITE_SITE_URL`                  | Local          | Origin served by Vite during development; Better Auth uses it to craft local auth links.           |
-| `SITE_URL`                       | Convex         | Server-visible origin for email links and CORS validation inside Convex functions.                 |
-| `BETTER_AUTH_SECRET`             | Local + Convex | Shared secret Better Auth uses to sign tokens; generated locally and synced to Convex.             |
-| `GITHUB_OAUTH`                   | Local + Convex | Feature flag enabling the GitHub button in the Better Auth UI.                                     |
-| `GITHUB_CLIENT_ID`               | Local + Convex | GitHub OAuth application identifier consumed by the Better Auth GitHub provider.                   |
-| `GITHUB_CLIENT_SECRET`           | Convex         | Confidential GitHub secret stored server-side for token exchange.                                  |
-| `GOOGLE_OAUTH`                   | Local + Convex | Toggles the Google provider on the sign-in surface.                                                |
-| `GOOGLE_CLIENT_ID`               | Local + Convex | Google OAuth client ID from Google Cloud; required for the Google button.                          |
-| `GOOGLE_CLIENT_SECRET`           | Convex         | Google OAuth secret stored server-side for token exchanges.                                        |
-| `APPLE_OAUTH`                    | Local + Convex | Enables the Sign in with Apple entry point.                                                        |
-| `APPLE_CLIENT_ID`                | Local + Convex | Apple service identifier forwarded to Better Auth when Apple auth is active.                       |
-| `APPLE_CLIENT_SECRET`            | Convex         | JWT secret Apple requires for token exchange; never shipped to the browser.                        |
-| `APPLE_APP_BUNDLE_IDENTIFIER`    | Convex         | Optional native bundle identifier used when exchanging Apple ID tokens.                            |
-| `MAIL_CONSOLE_PREVIEW`           | Local + Convex | When true routes Better Auth mailers to console logs; disable to send via Resend.                  |
-| `RESEND_API_KEY`                 | Convex         | API key for Resend; required when mail preview is disabled.                                        |
-| `MAIL_FROM`                      | Local + Convex | Default `From` header applied to all transactional emails.                                         |
-| `BRAND_NAME`                     | Local + Convex | Optional brand label injected into email templates.                                                |
-| `BRAND_LOGO_URL`                 | Local + Convex | Optional HTTPS logo URL rendered in email headers.                                                 |
-| `BRAND_TAGLINE`                  | Local + Convex | Optional footer copy for transactional emails.                                                     |
-| `BETTER_AUTH_RATE_LIMIT_ENABLED` | Local + Convex | Controls the Convex-backed rate limiter Better Auth ships with.                                    |
+| Variable                         | Scope          | Purpose                                                                                                   |
+| -------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------- |
+| `CONVEX_DEPLOYMENT`              | Local + Convex | Links the repo to the correct Convex deployment slug so CLI commands target the right environment.        |
+| `CONVEX_SITE_URL`                | Convex         | Public `.site` domain Convex issues; Better Auth uses it for middleware callbacks.                        |
+| `VITE_CONVEX_URL`                | Local          | Browser-consumable Convex endpoint used by the client SDK for queries and mutations.                      |
+| `VITE_CONVEX_SITE_URL`           | Local          | Mirrors `CONVEX_SITE_URL` for the browser so auth flows can reach Convex-hosted routes.                   |
+| `VITE_SITE_URL`                  | Local          | Origin served by Vite during development; Better Auth uses it to craft local auth links.                  |
+| `SITE_URL`                       | Convex         | Server-visible origin for email links and CORS validation inside Convex functions.                        |
+| `BETTER_AUTH_SECRET`             | Local + Convex | Shared secret Better Auth uses to sign tokens; generated locally and synced to Convex.                    |
+| `GITHUB_OAUTH`                   | Local + Convex | Feature flag enabling the GitHub button in the Better Auth UI.                                            |
+| `GITHUB_CLIENT_ID`               | Local + Convex | GitHub OAuth application identifier consumed by the Better Auth GitHub provider.                          |
+| `GITHUB_CLIENT_SECRET`           | Convex         | Confidential GitHub secret stored server-side for token exchange.                                         |
+| `GOOGLE_OAUTH`                   | Local + Convex | Toggles the Google provider on the sign-in surface.                                                       |
+| `GOOGLE_CLIENT_ID`               | Local + Convex | Google OAuth client ID from Google Cloud; required for the Google button.                                 |
+| `GOOGLE_CLIENT_SECRET`           | Convex         | Google OAuth secret stored server-side for token exchanges.                                               |
+| `APPLE_OAUTH`                    | Local + Convex | Enables the Sign in with Apple entry point.                                                               |
+| `APPLE_CLIENT_ID`                | Local + Convex | Apple service identifier forwarded to Better Auth when Apple auth is active.                              |
+| `APPLE_CLIENT_SECRET`            | Convex         | JWT secret Apple requires for token exchange; never shipped to the browser.                               |
+| `APPLE_APP_BUNDLE_IDENTIFIER`    | Convex         | Optional native bundle identifier used when exchanging Apple ID tokens.                                   |
+| `AUTH_PASSPHRASE_SIGN_IN`        | Local + Convex | Enables the passphrase sign-in surface; accepts true/false (case-insensitive) and defaults to true.       |
+| `AUTH_PASSPHRASE_SIGN_UP`        | Local + Convex | Enables passphrase sign-up; accepts true/false (case-insensitive) and defaults to true.                   |
+| `AUTH_MAGIC_LINK_SIGN_IN`        | Local + Convex | Controls the magic link option in auth flows; accepts true/false (case-insensitive) and defaults to true. |
+| `AUTH_VERIFICATION_CODE_SIGN_IN` | Local + Convex | Toggles email verification code sign-in; accepts true/false (case-insensitive) and defaults to true.      |
+| `MAIL_CONSOLE_PREVIEW`           | Local + Convex | When true routes Better Auth mailers to console logs; disable to send via Resend.                         |
+| `RESEND_API_KEY`                 | Convex         | API key for Resend; required when mail preview is disabled.                                               |
+| `MAIL_FROM`                      | Local + Convex | Default `From` header applied to all transactional emails.                                                |
+| `BRAND_NAME`                     | Local + Convex | Optional brand label injected into email templates.                                                       |
+| `BRAND_LOGO_URL`                 | Local + Convex | Optional HTTPS logo URL rendered in email headers.                                                        |
+| `BRAND_TAGLINE`                  | Local + Convex | Optional footer copy for transactional emails.                                                            |
+| `BETTER_AUTH_RATE_LIMIT_ENABLED` | Local + Convex | Controls the Convex-backed rate limiter Better Auth ships with.                                           |
 
 ## Testing
 

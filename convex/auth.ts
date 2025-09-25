@@ -92,6 +92,48 @@ const hasScheduler = (
   "scheduler" in candidate &&
   typeof (candidate as SchedulerCapableCtx).scheduler.runAfter === "function";
 
+const createSecurityEventDispatcher = (
+  ctx: GenericCtx<DataModel>,
+  optionsOnly: boolean,
+) => {
+  if (optionsOnly) {
+    return (_payload: SecurityLogPayload) => {};
+  }
+
+  const scheduler = hasScheduler(ctx) ? ctx.scheduler : null;
+  const runMutation = hasRunMutation(ctx) ? ctx.runMutation : null;
+
+  return (payload: SecurityLogPayload) => {
+    const dispatch = async () => {
+      if (scheduler) {
+        await scheduler.runAfter(
+          0,
+          internal.auditLogs.recordSecurityEvent,
+          payload,
+        );
+        return;
+      }
+
+      if (runMutation) {
+        await runMutation(internal.auditLogs.recordSecurityEvent, payload);
+        return;
+      }
+
+      console.error(
+        "[auth] Missing scheduler and runMutation; dropping security event",
+        payload,
+      );
+    };
+
+    void dispatch().catch((error) => {
+      console.error(`[auth] Failed to record security event:`, error);
+    });
+  };
+};
+
+export const __testCreateSecurityEventDispatcher =
+  createSecurityEventDispatcher;
+
 type AuthOptions = Parameters<typeof betterAuth>[0];
 type SocialProviders = NonNullable<AuthOptions["socialProviders"]>;
 
@@ -389,6 +431,8 @@ export const createAuth = (
     return undefined;
   };
 
+  const dispatchSecurityEvent = createSecurityEventDispatcher(ctx, optionsOnly);
+
   const scheduleSecurityEvent = (payload: SecurityLogPayload) => {
     if (optionsOnly) {
       return;
@@ -403,25 +447,7 @@ export const createAuth = (
         : undefined,
     };
 
-    try {
-      if (hasScheduler(ctx)) {
-        void ctx.scheduler.runAfter(
-          0,
-          internal.auditLogs.recordSecurityEvent,
-          normalized,
-        );
-        return;
-      }
-
-      if (hasRunMutation(ctx)) {
-        void ctx.runMutation(
-          internal.auditLogs.recordSecurityEvent,
-          normalized,
-        );
-      }
-    } catch (error) {
-      console.error(`[auth] Failed to record security event:`, error);
-    }
+    dispatchSecurityEvent(normalized);
   };
 
   const emitSecurityEvent = (

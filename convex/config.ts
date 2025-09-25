@@ -1,6 +1,7 @@
 import { query } from "./_generated/server";
 import {
   readAppleConfigFromEnv,
+  readAuthFeatureConfigFromEnv,
   readGithubConfigFromEnv,
   readGoogleConfigFromEnv,
   readMailConfigFromEnv,
@@ -21,6 +22,9 @@ export const publicConfig = query({
     const mailConfig = readMailConfigFromEnv(
       process.env as Record<string, string | undefined>,
     );
+    const authFeatures = readAuthFeatureConfigFromEnv(
+      process.env as Record<string, string | undefined>,
+    );
 
     return {
       githubOAuth: githubConfig.enabled,
@@ -32,6 +36,10 @@ export const publicConfig = query({
       mailPreview: mailConfig.preview,
       mailErrors: mailConfig.errors,
       brand: mailConfig.brand,
+      passphraseSignIn: authFeatures.passphraseSignIn,
+      passphraseSignUp: authFeatures.passphraseSignUp,
+      magicLinkSignIn: authFeatures.magicLinkSignIn,
+      verificationCodeSignIn: authFeatures.verificationCodeSignIn,
     };
   },
 });

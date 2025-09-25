@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { readAppleConfigFromEnv, readGoogleConfigFromEnv } from "./config";
+import {
+  readAppleConfigFromEnv,
+  readAuthFeatureConfigFromEnv,
+  readGoogleConfigFromEnv,
+} from "./config";
 
 describe("readGoogleConfigFromEnv", () => {
   it("returns disabled config when toggle is falsy but preserves provided credentials", () => {
@@ -96,5 +100,44 @@ describe("readAppleConfigFromEnv", () => {
       appBundleIdentifier: "com.example.app",
       errors: [],
     });
+  });
+});
+
+describe("readAuthFeatureConfigFromEnv", () => {
+  it("defaults to enabling all flows when toggles are omitted", () => {
+    const config = readAuthFeatureConfigFromEnv({});
+
+    expect(config).toEqual({
+      passphraseSignIn: true,
+      passphraseSignUp: true,
+      magicLinkSignIn: true,
+      verificationCodeSignIn: true,
+    });
+  });
+
+  it("honours explicit boolean-like toggle values", () => {
+    const config = readAuthFeatureConfigFromEnv({
+      AUTH_PASSPHRASE_SIGN_IN: "false",
+      AUTH_PASSPHRASE_SIGN_UP: "0",
+      AUTH_MAGIC_LINK_SIGN_IN: "off",
+      AUTH_VERIFICATION_CODE_SIGN_IN: "no",
+    });
+
+    expect(config).toEqual({
+      passphraseSignIn: false,
+      passphraseSignUp: false,
+      magicLinkSignIn: false,
+      verificationCodeSignIn: false,
+    });
+  });
+
+  it("treats unknown values as enabled to avoid accidental lockouts", () => {
+    const config = readAuthFeatureConfigFromEnv({
+      AUTH_PASSPHRASE_SIGN_IN: "maybe",
+      AUTH_PASSPHRASE_SIGN_UP: "enable",
+    });
+
+    expect(config.passphraseSignIn).toBe(true);
+    expect(config.passphraseSignUp).toBe(true);
   });
 });

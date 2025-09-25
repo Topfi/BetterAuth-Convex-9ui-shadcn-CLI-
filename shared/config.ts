@@ -46,6 +46,15 @@ export const mailConfigSchema = z.object({
 
 export type MailConfig = z.infer<typeof mailConfigSchema>;
 
+export const authFeatureConfigSchema = z.object({
+  passphraseSignIn: z.boolean(),
+  passphraseSignUp: z.boolean(),
+  magicLinkSignIn: z.boolean(),
+  verificationCodeSignIn: z.boolean(),
+});
+
+export type AuthFeatureConfig = z.infer<typeof authFeatureConfigSchema>;
+
 const truthyValues = new Set(["true", "1", "yes", "y", "on"]);
 const falsyValues = new Set(["false", "0", "no", "n", "off", ""]);
 
@@ -73,6 +82,17 @@ function parseOptionalBoolean(raw?: string): boolean | null {
     return false;
   }
   return null;
+}
+
+function parseBooleanWithDefault(
+  raw: string | undefined,
+  defaultValue: boolean,
+): boolean {
+  const parsed = parseOptionalBoolean(raw);
+  if (parsed === null) {
+    return defaultValue;
+  }
+  return parsed;
 }
 
 function normalizeBrandValue(value: string | undefined): string | undefined {
@@ -297,5 +317,33 @@ export function readMailConfigFromEnv(
     from,
     brand,
     errors,
+  });
+}
+
+export function readAuthFeatureConfigFromEnv(
+  env: Record<string, string | undefined>,
+): AuthFeatureConfig {
+  const passphraseSignIn = parseBooleanWithDefault(
+    env.AUTH_PASSPHRASE_SIGN_IN,
+    true,
+  );
+  const passphraseSignUp = parseBooleanWithDefault(
+    env.AUTH_PASSPHRASE_SIGN_UP,
+    true,
+  );
+  const magicLinkSignIn = parseBooleanWithDefault(
+    env.AUTH_MAGIC_LINK_SIGN_IN,
+    true,
+  );
+  const verificationCodeSignIn = parseBooleanWithDefault(
+    env.AUTH_VERIFICATION_CODE_SIGN_IN,
+    true,
+  );
+
+  return authFeatureConfigSchema.parse({
+    passphraseSignIn,
+    passphraseSignUp,
+    magicLinkSignIn,
+    verificationCodeSignIn,
   });
 }

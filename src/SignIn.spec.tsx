@@ -24,19 +24,35 @@ type PublicConfig = {
   googleErrors: readonly string[];
   appleOAuth: boolean;
   appleErrors: readonly string[];
+  passphraseSignIn: boolean;
+  passphraseSignUp: boolean;
+  magicLinkSignIn: boolean;
+  verificationCodeSignIn: boolean;
 };
 
 const useConvexAuthMock = vi.fn();
-const publicConfigState: { value: PublicConfig } = {
-  value: {
-    githubOAuth: false,
-    githubErrors: [],
-    googleOAuth: false,
-    googleErrors: [],
-    appleOAuth: false,
-    appleErrors: [],
-  },
+const basePublicConfig: PublicConfig = {
+  githubOAuth: false,
+  githubErrors: [],
+  googleOAuth: false,
+  googleErrors: [],
+  appleOAuth: false,
+  appleErrors: [],
+  passphraseSignIn: true,
+  passphraseSignUp: true,
+  magicLinkSignIn: true,
+  verificationCodeSignIn: true,
 };
+const publicConfigState: { value: PublicConfig | undefined } = {
+  value: { ...basePublicConfig },
+};
+
+function updatePublicConfig(overrides: Partial<PublicConfig>) {
+  publicConfigState.value = {
+    ...(publicConfigState.value ?? basePublicConfig),
+    ...overrides,
+  };
+}
 
 const {
   signInEmailMock,
@@ -149,14 +165,7 @@ beforeEach(() => {
   signInEmailMock.mockResolvedValue({ data: null, error: null });
   signInWithGithubMock.mockResolvedValue(undefined);
 
-  publicConfigState.value = {
-    githubOAuth: false,
-    githubErrors: [],
-    googleOAuth: false,
-    googleErrors: [],
-    appleOAuth: false,
-    appleErrors: [],
-  };
+  publicConfigState.value = { ...basePublicConfig };
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
@@ -497,11 +506,10 @@ describe("SignIn", () => {
       isAuthenticated: false,
       isLoading: false,
     });
-    publicConfigState.value = {
-      ...publicConfigState.value,
+    updatePublicConfig({
       githubOAuth: true,
       githubErrors: [],
-    };
+    });
     signInWithGithubMock.mockResolvedValueOnce(undefined);
 
     renderWithProviders(
@@ -524,11 +532,10 @@ describe("SignIn", () => {
       isAuthenticated: false,
       isLoading: false,
     });
-    publicConfigState.value = {
-      ...publicConfigState.value,
+    updatePublicConfig({
       githubOAuth: true,
       githubErrors: ["GitHub OAuth client secret is required."],
-    };
+    });
 
     renderWithProviders(
       <Routes>
@@ -551,11 +558,10 @@ describe("SignIn", () => {
       isAuthenticated: false,
       isLoading: false,
     });
-    publicConfigState.value = {
-      ...publicConfigState.value,
+    updatePublicConfig({
       googleOAuth: true,
       googleErrors: [],
-    };
+    });
 
     renderWithProviders(
       <Routes>
@@ -578,11 +584,10 @@ describe("SignIn", () => {
       isAuthenticated: false,
       isLoading: false,
     });
-    publicConfigState.value = {
-      ...publicConfigState.value,
+    updatePublicConfig({
       googleOAuth: true,
       googleErrors: ["Google OAuth client ID missing."],
-    };
+    });
 
     renderWithProviders(
       <Routes>
@@ -604,11 +609,10 @@ describe("SignIn", () => {
       isAuthenticated: false,
       isLoading: false,
     });
-    publicConfigState.value = {
-      ...publicConfigState.value,
+    updatePublicConfig({
       appleOAuth: true,
       appleErrors: [],
-    };
+    });
 
     renderWithProviders(
       <Routes>
@@ -629,11 +633,10 @@ describe("SignIn", () => {
       isAuthenticated: false,
       isLoading: false,
     });
-    publicConfigState.value = {
-      ...publicConfigState.value,
+    updatePublicConfig({
       appleOAuth: true,
       appleErrors: ["Apple OAuth client secret missing."],
-    };
+    });
 
     renderWithProviders(
       <Routes>
@@ -648,5 +651,107 @@ describe("SignIn", () => {
       "Apple OAuth client secret missing.",
     );
     expect(signInSocialMock).not.toHaveBeenCalled();
+  });
+
+  it("hides passphrase controls while the config is loading", () => {
+    useConvexAuthMock.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+    });
+    publicConfigState.value = undefined;
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/sign-in" element={<SignIn />} />
+      </Routes>,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Use a passphrase instead" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Passphrase")).not.toBeInTheDocument();
+  });
+
+  it("hides passphrase controls when disabled", () => {
+    useConvexAuthMock.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+    });
+    updatePublicConfig({
+      passphraseSignIn: false,
+    });
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/sign-in" element={<SignIn />} />
+      </Routes>,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Sign in with passphrase" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Use a passphrase instead", { exact: false }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides the magic link flow when disabled", () => {
+    useConvexAuthMock.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+    });
+    updatePublicConfig({
+      magicLinkSignIn: false,
+    });
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/sign-in" element={<SignIn />} />
+      </Routes>,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Send magic link" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides the verification code flow when disabled", () => {
+    useConvexAuthMock.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+    });
+    updatePublicConfig({
+      verificationCodeSignIn: false,
+    });
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/sign-in" element={<SignIn />} />
+      </Routes>,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Send verification code" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides the sign-up link when sign-up is disabled", () => {
+    useConvexAuthMock.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+    });
+    updatePublicConfig({
+      passphraseSignUp: false,
+    });
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/sign-in" element={<SignIn />} />
+      </Routes>,
+    );
+
+    expect(
+      screen.queryByRole("link", { name: "Create one" }),
+    ).not.toBeInTheDocument();
   });
 });

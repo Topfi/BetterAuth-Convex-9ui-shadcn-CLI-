@@ -18,6 +18,34 @@ import SignUp from "@/SignUp";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { COMPROMISED_PASSPHRASE_MESSAGE } from "@/shared/passphrase-strength";
 
+type PublicConfig = {
+  githubOAuth: boolean;
+  githubErrors: readonly string[];
+  googleOAuth: boolean;
+  googleErrors: readonly string[];
+  appleOAuth: boolean;
+  appleErrors: readonly string[];
+  passphraseSignIn: boolean;
+  passphraseSignUp: boolean;
+  magicLinkSignIn: boolean;
+  verificationCodeSignIn: boolean;
+};
+
+const publicConfigState: { value: PublicConfig } = {
+  value: {
+    githubOAuth: false,
+    githubErrors: [],
+    googleOAuth: false,
+    googleErrors: [],
+    appleOAuth: false,
+    appleErrors: [],
+    passphraseSignIn: true,
+    passphraseSignUp: true,
+    magicLinkSignIn: true,
+    verificationCodeSignIn: true,
+  },
+};
+
 const useConvexAuthMock = vi.fn();
 const {
   signUpEmailMock,
@@ -42,6 +70,7 @@ vi.mock("convex/react", async () => {
     ...actual,
     useConvexAuth: () => useConvexAuthMock(),
     useMutation: () => stagePendingIdentityMock,
+    useQuery: () => publicConfigState.value,
   };
 });
 
@@ -109,6 +138,18 @@ beforeEach(() => {
     error: null,
   });
   stagePendingIdentityMock.mockResolvedValue({ ok: true });
+  publicConfigState.value = {
+    githubOAuth: false,
+    githubErrors: [],
+    googleOAuth: false,
+    googleErrors: [],
+    appleOAuth: false,
+    appleErrors: [],
+    passphraseSignIn: true,
+    passphraseSignUp: true,
+    magicLinkSignIn: true,
+    verificationCodeSignIn: true,
+  };
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
@@ -596,5 +637,27 @@ describe("SignUp", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("renders a disabled notice when passphrase sign-up is turned off", () => {
+    useConvexAuthMock.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+    });
+    publicConfigState.value = {
+      ...publicConfigState.value,
+      passphraseSignUp: false,
+    };
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/sign-up" element={<SignUp />} />
+      </Routes>,
+    );
+
+    expect(
+      screen.getByText("Sign up is currently disabled."),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Username")).not.toBeInTheDocument();
   });
 });

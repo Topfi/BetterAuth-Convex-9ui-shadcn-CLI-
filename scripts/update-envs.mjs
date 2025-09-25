@@ -244,6 +244,31 @@ function main() {
   const brandName = sanitize(envFile.get("BRAND_NAME"));
   const brandLogoUrl = sanitize(envFile.get("BRAND_LOGO_URL"));
   const brandTagline = sanitize(envFile.get("BRAND_TAGLINE"));
+  const passphraseSignInRaw = stripInlineComment(
+    envFile.get("AUTH_PASSPHRASE_SIGN_IN"),
+  );
+  const canonicalPassphraseSignIn =
+    canonicalizeBooleanString(passphraseSignInRaw);
+  const passphraseSignIn = canonicalPassphraseSignIn ?? "true";
+  const passphraseSignUpRaw = stripInlineComment(
+    envFile.get("AUTH_PASSPHRASE_SIGN_UP"),
+  );
+  const canonicalPassphraseSignUp =
+    canonicalizeBooleanString(passphraseSignUpRaw);
+  const passphraseSignUp = canonicalPassphraseSignUp ?? "true";
+  const magicLinkSignInRaw = stripInlineComment(
+    envFile.get("AUTH_MAGIC_LINK_SIGN_IN"),
+  );
+  const canonicalMagicLinkSignIn =
+    canonicalizeBooleanString(magicLinkSignInRaw);
+  const magicLinkSignIn = canonicalMagicLinkSignIn ?? "true";
+  const verificationCodeSignInRaw = stripInlineComment(
+    envFile.get("AUTH_VERIFICATION_CODE_SIGN_IN"),
+  );
+  const canonicalVerificationCodeSignIn = canonicalizeBooleanString(
+    verificationCodeSignInRaw,
+  );
+  const verificationCodeSignIn = canonicalVerificationCodeSignIn ?? "true";
 
   if (githubToggleRaw && canonicalGithub === null) {
     log(
@@ -266,6 +291,30 @@ function main() {
   if (mailPreviewRaw && canonicalMailPreview === null) {
     log(
       "WARN MAIL_CONSOLE_PREVIEW value is not recognized; defaulting to 'true' for Convex env sync.",
+    );
+  }
+
+  if (passphraseSignInRaw && canonicalPassphraseSignIn === null) {
+    log(
+      "WARN AUTH_PASSPHRASE_SIGN_IN value is not recognized; defaulting to 'true' for Convex env sync.",
+    );
+  }
+
+  if (passphraseSignUpRaw && canonicalPassphraseSignUp === null) {
+    log(
+      "WARN AUTH_PASSPHRASE_SIGN_UP value is not recognized; defaulting to 'true' for Convex env sync.",
+    );
+  }
+
+  if (magicLinkSignInRaw && canonicalMagicLinkSignIn === null) {
+    log(
+      "WARN AUTH_MAGIC_LINK_SIGN_IN value is not recognized; defaulting to 'true' for Convex env sync.",
+    );
+  }
+
+  if (verificationCodeSignInRaw && canonicalVerificationCodeSignIn === null) {
+    log(
+      "WARN AUTH_VERIFICATION_CODE_SIGN_IN value is not recognized; defaulting to 'true' for Convex env sync.",
     );
   }
 
@@ -308,6 +357,10 @@ function main() {
   syncConvexEnvValue("BRAND_NAME", brandName);
   syncConvexEnvValue("BRAND_LOGO_URL", brandLogoUrl);
   syncConvexEnvValue("BRAND_TAGLINE", brandTagline);
+  syncConvexEnvValue("AUTH_PASSPHRASE_SIGN_IN", passphraseSignIn);
+  syncConvexEnvValue("AUTH_PASSPHRASE_SIGN_UP", passphraseSignUp);
+  syncConvexEnvValue("AUTH_MAGIC_LINK_SIGN_IN", magicLinkSignIn);
+  syncConvexEnvValue("AUTH_VERIFICATION_CODE_SIGN_IN", verificationCodeSignIn);
 
   const localSecretAnalysis = analyzeSecretCandidate(
     stripInlineComment(envFile.get(SECRET_ENV_KEY)),
