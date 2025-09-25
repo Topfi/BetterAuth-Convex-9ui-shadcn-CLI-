@@ -61,7 +61,7 @@ const dispatchEmail = async ({
         "runMutation" in ctx &&
         typeof ctx.runMutation === "function"
       ) {
-        return ctx as MutationCtx; 
+        return ctx as MutationCtx;
       }
       throw new Error("Could not establish a valid mutation context.");
     }

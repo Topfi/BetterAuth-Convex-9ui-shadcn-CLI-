@@ -1,7 +1,3 @@
-/**
- * PRE-FLIGHT: Follow AGENTS.md hard rules.
- * Workspace surface for managing account tools.
- */
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "convex/react";
 import Counter from "./Counter";

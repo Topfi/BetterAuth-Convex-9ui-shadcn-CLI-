@@ -1,12 +1,3 @@
-#!/usr/bin/env node
-/**
- * PRE-FLIGHT: Follow AGENTS.md hard rules.
- * - No edits under src/components/ui
- * - No useMemo/useCallback/React.memo (React Compiler handles memoization)
- * - Shared types & Zod from shared/
- * - Maintain client/server/shared structure parity; Convex file names: [a-zA-Z0-9_.]+
- */
-
 import { readdirSync, statSync, readFileSync } from "node:fs";
 import {
   resolve,

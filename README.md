@@ -214,9 +214,9 @@ Follow these steps and you can drop in a bespoke React surface without disturbin
 
 ## Production Deploment using Cloudflare Pages and Resend
 
-| Cloudflare                                                    | Convex                                                                | Mail                                                                   |
-| --------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| ![Cloudflare](./public/CloudflareEnvs.png)           | ![Convex](./public/ConvexEnvs.png)                   | ![Mail](./public/MailVerification.png)    
+| Cloudflare                                 | Convex                             | Mail                                   |
+| ------------------------------------------ | ---------------------------------- | -------------------------------------- |
+| ![Cloudflare](./public/CloudflareEnvs.png) | ![Convex](./public/ConvexEnvs.png) | ![Mail](./public/MailVerification.png) |
 
 These steps will guide you towards deploying this repo to production using Cloudflare Pages and Convex for mail auth, OTP, etc.
 
@@ -229,29 +229,27 @@ These steps will guide you towards deploying this repo to production using Cloud
 
 3. Next, set your domain. Under Custom domains, add your production domain (for example `app.yourdomain.com`) and finish the DNS setup so the domain becomes Active.
 
-5. In your Convex deployment, create a Production deployment for your project. You can click on the button in the browser or use the CLI, whatever floats your boat.
+4. In your Convex deployment, create a Production deployment for your project. You can click on the button in the browser or use the CLI, whatever floats your boat.
    Copy both URLs:
-
    - Deployment URL (ends with `.convex.cloud`)
    - Site URL (ends with `.convex.site`)
 
-7. In your Cloudflare Pages deployment, add these variables:
-
+5. In your Cloudflare Pages deployment, add these variables:
    - `VITE_CONVEX_URL` = your Convex Deployment URL (`https://...convex.cloud`)
    - `VITE_CONVEX_SITE_URL` = your Convex Site URL (`https://...convex.site`)
    - `VITE_SITE_URL` = your custom domain URL (`https://app.yourdomain.com`)
    - `SITE_URL` = same as above (`https://app.yourdomain.com`)
 
-8. Create your Resend account at [https://resend.com](https://resend.com). In Resend, head to Domains, add your domain (for example `yourdomain.com`). Add the DNS records they provide at your DNS host (Cloudflare or wherever your DNS lives; if you use Cloudflare this is only one click amazingly) then wait until the domain status is shown as Verified.
+6. Create your Resend account at [https://resend.com](https://resend.com). In Resend, head to Domains, add your domain (for example `yourdomain.com`). Add the DNS records they provide at your DNS host (Cloudflare or wherever your DNS lives; if you use Cloudflare this is only one click amazingly) then wait until the domain status is shown as Verified.
 
-9. In Resend, head to API Keys, create a Production API key and copy it once, setting it to only Send and use your newly verified domain. Choose or add a sender address under your verified domain, for example `onboarding@yourdomain.com`. This exact email will be your `MAIL_FROM`.
+7. In Resend, head to API Keys, create a Production API key and copy it once, setting it to only Send and use your newly verified domain. Choose or add a sender address under your verified domain, for example `onboarding@yourdomain.com`. This exact email will be your `MAIL_FROM`.
 
-10. In your Convex prod deployment, add these server-side variables:
+8. In your Convex prod deployment, add these server-side variables:
 
-   - `RESEND_API_KEY` = your Resend production API key
-   - `MAIL_FROM` = your verified address, for example `onboarding@yourdomain.com`
-   - `MAIL_CONSOLE_PREVIEW` = `false`
-   - `BETTER_AUTH_SECRET` = a long random string (generate one using base64; do not reuse between environments)
+- `RESEND_API_KEY` = your Resend production API key
+- `MAIL_FROM` = your verified address, for example `onboarding@yourdomain.com`
+- `MAIL_CONSOLE_PREVIEW` = `false`
+- `BETTER_AUTH_SECRET` = a long random string (generate one using base64; do not reuse between environments)
 
 11. Still in your Convex env vars, disable social logins you are not using by setting them to `false` (e.g. `GITHUB_OAUTH=false`, `GOOGLE_OAUTH=false`, `APPLE_OAUTH=false`), or configure them fully if you plan to use them.
 

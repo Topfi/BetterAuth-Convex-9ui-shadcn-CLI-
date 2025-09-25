@@ -1,14 +1,3 @@
-#!/usr/bin/env node
-/**
- * PRE-FLIGHT: Follow AGENTS.md hard rules.
- * - No edits under src/components/ui
- * - No useMemo/useCallback/React.memo (React Compiler handles memoization)
- * - Shared types & Zod from shared/
- * - Maintain client/server/shared structure parity; Convex file names: [A-Za-z0-9_.]+
- * - Use "passphrase" terminology; provide ARIA labels; use toast helpers for UX
- * - Destructive/security flows go through audit helpers; register purgers for user-owned data
- */
-
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
