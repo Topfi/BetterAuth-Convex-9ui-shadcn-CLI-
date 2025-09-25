@@ -335,6 +335,12 @@ function main() {
     const rawAppleClientId = envFile.get("APPLE_CLIENT_ID");
     const rawAppleClientSecret = envFile.get("APPLE_CLIENT_SECRET");
     const rawAppleBundleId = envFile.get("APPLE_APP_BUNDLE_IDENTIFIER");
+    const rawPassphraseSignIn = envFile.get("AUTH_PASSPHRASE_SIGN_IN");
+    const rawPassphraseSignUp = envFile.get("AUTH_PASSPHRASE_SIGN_UP");
+    const rawMagicLinkSignIn = envFile.get("AUTH_MAGIC_LINK_SIGN_IN");
+    const rawVerificationCodeSignIn = envFile.get(
+      "AUTH_VERIFICATION_CODE_SIGN_IN",
+    );
     const rawMailPreview = envFile.get("MAIL_CONSOLE_PREVIEW");
     const rawResendApiKey = envFile.get("RESEND_API_KEY");
     const rawMailFrom = envFile.get("MAIL_FROM");
@@ -355,6 +361,12 @@ function main() {
     const trimmedAppleClientId = stripInlineComment(rawAppleClientId);
     const trimmedAppleClientSecret = stripInlineComment(rawAppleClientSecret);
     const trimmedAppleBundleId = stripInlineComment(rawAppleBundleId);
+    const trimmedPassphraseSignIn = stripInlineComment(rawPassphraseSignIn);
+    const trimmedPassphraseSignUp = stripInlineComment(rawPassphraseSignUp);
+    const trimmedMagicLinkSignIn = stripInlineComment(rawMagicLinkSignIn);
+    const trimmedVerificationCodeSignIn = stripInlineComment(
+      rawVerificationCodeSignIn,
+    );
     const trimmedMailPreview = stripInlineComment(rawMailPreview);
     const trimmedResendApiKey = stripInlineComment(rawResendApiKey);
     const trimmedMailFrom = stripInlineComment(rawMailFrom);
@@ -447,6 +459,43 @@ function main() {
       );
     }
 
+    // Runs Convex CLI commands and writes .env.local; no automated test covers this path.
+    const canonicalPassphraseSignIn =
+      canonicalizeBooleanString(trimmedPassphraseSignIn);
+    if (trimmedPassphraseSignIn && canonicalPassphraseSignIn === null) {
+      log(
+        "WARN AUTH_PASSPHRASE_SIGN_IN has an unexpected value; defaulting to 'true'. Update the toggle after setup if needed.",
+      );
+    }
+
+    const canonicalPassphraseSignUp =
+      canonicalizeBooleanString(trimmedPassphraseSignUp);
+    if (trimmedPassphraseSignUp && canonicalPassphraseSignUp === null) {
+      log(
+        "WARN AUTH_PASSPHRASE_SIGN_UP has an unexpected value; defaulting to 'true'. Update the toggle after setup if needed.",
+      );
+    }
+
+    const canonicalMagicLinkSignIn =
+      canonicalizeBooleanString(trimmedMagicLinkSignIn);
+    if (trimmedMagicLinkSignIn && canonicalMagicLinkSignIn === null) {
+      log(
+        "WARN AUTH_MAGIC_LINK_SIGN_IN has an unexpected value; defaulting to 'true'. Update the toggle after setup if needed.",
+      );
+    }
+
+    const canonicalVerificationCodeSignIn = canonicalizeBooleanString(
+      trimmedVerificationCodeSignIn,
+    );
+    if (
+      trimmedVerificationCodeSignIn &&
+      canonicalVerificationCodeSignIn === null
+    ) {
+      log(
+        "WARN AUTH_VERIFICATION_CODE_SIGN_IN has an unexpected value; defaulting to 'true'. Update the toggle after setup if needed.",
+      );
+    }
+
     const mailPreviewValue = canonicalMailPreview ?? "true";
     const mailFromValue =
       trimmedMailFrom && trimmedMailFrom.length > 0
@@ -467,6 +516,11 @@ function main() {
     const appleClientIdValue = trimmedAppleClientId ?? "";
     const appleClientSecretValue = trimmedAppleClientSecret ?? "";
     const appleBundleIdentifierValue = trimmedAppleBundleId ?? "";
+    const passphraseSignInValue = canonicalPassphraseSignIn ?? "true";
+    const passphraseSignUpValue = canonicalPassphraseSignUp ?? "true";
+    const magicLinkSignInValue = canonicalMagicLinkSignIn ?? "true";
+    const verificationCodeSignInValue =
+      canonicalVerificationCodeSignIn ?? "true";
 
     envFile.upsertBlock({
       key: "GITHUB_OAUTH",
@@ -535,6 +589,38 @@ function main() {
       value: appleBundleIdentifierValue,
       comment: "# Optional app bundle identifier for native Apple sign-in",
       leadingBlank: false,
+    });
+
+    envFile.upsertBlock({
+      key: "AUTH_PASSPHRASE_SIGN_IN",
+      value: passphraseSignInValue,
+      comment:
+        "# Passphrase sign-in toggle (true to show the passphrase form in sign-in)",
+      leadingBlank: true,
+    });
+
+    envFile.upsertBlock({
+      key: "AUTH_PASSPHRASE_SIGN_UP",
+      value: passphraseSignUpValue,
+      comment:
+        "# Passphrase sign-up toggle (true to allow email + passphrase sign-up)",
+      leadingBlank: true,
+    });
+
+    envFile.upsertBlock({
+      key: "AUTH_MAGIC_LINK_SIGN_IN",
+      value: magicLinkSignInValue,
+      comment:
+        "# Magic link sign-in toggle (true to offer magic link sign-in)",
+      leadingBlank: true,
+    });
+
+    envFile.upsertBlock({
+      key: "AUTH_VERIFICATION_CODE_SIGN_IN",
+      value: verificationCodeSignInValue,
+      comment:
+        "# Verification code sign-in toggle (true to offer email verification codes)",
+      leadingBlank: true,
     });
 
     envFile.upsertBlock({
