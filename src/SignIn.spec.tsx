@@ -143,11 +143,13 @@ function renderWithProviders(
   ui: ReactNode,
   { initialEntries = ["/sign-in"] }: { initialEntries?: string[] } = {},
 ) {
-  return render(
+  const Wrapper = ({ children }: { children: ReactNode }) => (
     <ThemeProvider>
-      <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
-    </ThemeProvider>,
+      <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>
+    </ThemeProvider>
   );
+
+  return render(ui, { wrapper: Wrapper });
 }
 
 beforeEach(() => {
@@ -666,10 +668,14 @@ describe("SignIn", () => {
       </Routes>,
     );
 
+    expect(screen.getByTestId("email-sign-in-loading")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Use a passphrase instead" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Passphrase")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Email-based sign-in is currently disabled/),
+    ).not.toBeInTheDocument();
   });
 
   it("hides passphrase controls when disabled", () => {
@@ -733,6 +739,90 @@ describe("SignIn", () => {
     expect(
       screen.queryByRole("button", { name: "Send verification code" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("does not flash the verification code flow while config loads", () => {
+    useConvexAuthMock.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+    });
+    publicConfigState.value = undefined;
+
+    const { rerender } = renderWithProviders(
+      <Routes>
+        <Route path="/sign-in" element={<SignIn />} />
+      </Routes>,
+    );
+
+    expect(screen.getByTestId("email-sign-in-loading")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Send verification code" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Send magic link" }),
+    ).not.toBeInTheDocument();
+
+    updatePublicConfig({
+      magicLinkSignIn: true,
+      verificationCodeSignIn: false,
+    });
+
+    rerender(
+      <Routes>
+        <Route path="/sign-in" element={<SignIn />} />
+      </Routes>,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Send verification code" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Send magic link" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("email-sign-in-loading"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not flash the magic link flow when disabled", () => {
+    useConvexAuthMock.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+    });
+    publicConfigState.value = undefined;
+
+    const { rerender } = renderWithProviders(
+      <Routes>
+        <Route path="/sign-in" element={<SignIn />} />
+      </Routes>,
+    );
+
+    expect(screen.getByTestId("email-sign-in-loading")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Send magic link" }),
+    ).not.toBeInTheDocument();
+
+    updatePublicConfig({
+      magicLinkSignIn: false,
+      verificationCodeSignIn: false,
+      passphraseSignIn: false,
+    });
+
+    rerender(
+      <Routes>
+        <Route path="/sign-in" element={<SignIn />} />
+      </Routes>,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Send magic link" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("email-sign-in-loading"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Email-based sign-in is currently disabled/),
+    ).toBeInTheDocument();
   });
 
   it("hides the sign-up link when sign-up is disabled", () => {
