@@ -30,6 +30,10 @@ export const buildNewAppletNode = (
   existingCount: number,
   nextZIndex: number,
   onRemove: (id: string) => void,
+  options: {
+    label?: string;
+    payload?: unknown;
+  } = {},
 ): NewAppletNode => {
   const nodeId = generateNodeId();
   const offset = (existingCount + 1) * 48;
@@ -55,8 +59,9 @@ export const buildNewAppletNode = (
     position: { x: position.x, y: position.y },
     data: {
       appletId: applet.id,
-      label: applet.name,
+      label: options.label ?? applet.name,
       onRemove,
+      payload: options.payload,
     },
     style: {
       width: size.width,
@@ -72,7 +77,7 @@ export const buildNewAppletNode = (
     persistence: {
       nodeId,
       appletId: applet.id,
-      label: applet.name,
+      label: options.label ?? applet.name,
       position,
       size,
     },

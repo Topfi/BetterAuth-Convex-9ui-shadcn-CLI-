@@ -8,6 +8,7 @@ export const securityEventSchema = z.enum([
   "passphrase_rejected",
   "two_factor_challenge",
   "account_deleted",
+  "generated_applet_committed",
 ]);
 
 export type SecurityEvent = z.infer<typeof securityEventSchema>;

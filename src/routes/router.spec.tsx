@@ -4,6 +4,7 @@ import { cleanup, render, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { AuthGate, Protected } from "@/routes/guards";
 import { routes } from "@/routes/router";
+import { ThemeProvider } from "@/providers/theme-provider";
 
 type UseConvexAuth = (typeof import("convex/react"))["useConvexAuth"];
 type UseQuery = (typeof import("convex/react"))["useQuery"];
@@ -31,6 +32,14 @@ const unauthenticatedState = { isAuthenticated: false, isLoading: false };
 beforeEach(() => {
   useConvexAuthMock.mockReset();
   useQueryMock.mockReset();
+  window.matchMedia = vi.fn(() => ({
+    matches: false,
+    media: "(prefers-color-scheme: dark)",
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    onchange: null,
+    dispatchEvent: vi.fn(() => false),
+  })) as unknown as typeof window.matchMedia;
 });
 
 afterEach(() => {
@@ -78,16 +87,18 @@ describe("router", () => {
     let currentPathname = "/";
 
     render(
-      <MemoryRouter initialEntries={["/"]}>
-        <LocationObserver
-          onChange={(pathname) => (currentPathname = pathname)}
-        />
-        <Routes>
-          <Route path="/" element={<AuthGate />} />
-          <Route path="/workspace" element={<div>workspace</div>} />
-          <Route path="/sign-in" element={<div>sign-in</div>} />
-        </Routes>
-      </MemoryRouter>,
+      <ThemeProvider>
+        <MemoryRouter initialEntries={["/"]}>
+          <LocationObserver
+            onChange={(pathname) => (currentPathname = pathname)}
+          />
+          <Routes>
+            <Route path="/" element={<AuthGate />} />
+            <Route path="/workspace" element={<div>workspace</div>} />
+            <Route path="/sign-in" element={<div>sign-in</div>} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
     );
 
     await waitFor(() => {
@@ -101,16 +112,18 @@ describe("router", () => {
     let currentPathname = "/";
 
     render(
-      <MemoryRouter initialEntries={["/"]}>
-        <LocationObserver
-          onChange={(pathname) => (currentPathname = pathname)}
-        />
-        <Routes>
-          <Route path="/" element={<AuthGate />} />
-          <Route path="/workspace" element={<div>workspace</div>} />
-          <Route path="/sign-in" element={<div>sign-in</div>} />
-        </Routes>
-      </MemoryRouter>,
+      <ThemeProvider>
+        <MemoryRouter initialEntries={["/"]}>
+          <LocationObserver
+            onChange={(pathname) => (currentPathname = pathname)}
+          />
+          <Routes>
+            <Route path="/" element={<AuthGate />} />
+            <Route path="/workspace" element={<div>workspace</div>} />
+            <Route path="/sign-in" element={<div>sign-in</div>} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
     );
 
     await waitFor(() => {
@@ -124,17 +137,19 @@ describe("router", () => {
     let currentPathname = "/workspace";
 
     render(
-      <MemoryRouter initialEntries={["/workspace"]}>
-        <LocationObserver
-          onChange={(pathname) => (currentPathname = pathname)}
-        />
-        <Routes>
-          <Route path="/sign-in" element={<div>sign-in</div>} />
-          <Route path="/workspace" element={<Protected />}>
-            <Route index element={<div>workspace</div>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>,
+      <ThemeProvider>
+        <MemoryRouter initialEntries={["/workspace"]}>
+          <LocationObserver
+            onChange={(pathname) => (currentPathname = pathname)}
+          />
+          <Routes>
+            <Route path="/sign-in" element={<div>sign-in</div>} />
+            <Route path="/workspace" element={<Protected />}>
+              <Route index element={<div>workspace</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
     );
 
     await waitFor(() => {

@@ -67,9 +67,9 @@ describe("SettingsApplet", () => {
     );
 
     expect(screen.getByText("Settings")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "General" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Theme" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Profile" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Privacy" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "General" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Theme" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Profile" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Privacy" })).toBeInTheDocument();
   });
 });
