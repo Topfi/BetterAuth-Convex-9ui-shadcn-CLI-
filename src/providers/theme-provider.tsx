@@ -5,6 +5,10 @@ import {
   type Theme,
   type ThemeProviderState,
 } from "./theme-context";
+import {
+  defaultThemeSettings,
+  type ThemeBackgroundPattern,
+} from "@/shared/settings/theme";
 
 type ThemeProviderProps = {
   children: ReactNode;
@@ -17,6 +21,7 @@ function ThemeProvider({
   defaultTheme = "system",
   storageKey = "vite-ui-theme",
 }: ThemeProviderProps) {
+  const patternStorageKey = `${storageKey}:background-pattern`;
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === "undefined") {
       return defaultTheme;
@@ -26,6 +31,19 @@ function ThemeProvider({
 
     return storedTheme ?? defaultTheme;
   });
+
+  const [backgroundPattern, setBackgroundPatternState] =
+    useState<ThemeBackgroundPattern>(() => {
+      if (typeof window === "undefined") {
+        return defaultThemeSettings.backgroundPattern;
+      }
+
+      const storedPattern = window.localStorage.getItem(
+        patternStorageKey,
+      ) as ThemeBackgroundPattern | null;
+
+      return storedPattern ?? defaultThemeSettings.backgroundPattern;
+    });
 
   useEffect(() => {
     if (typeof document === "undefined") {
@@ -38,6 +56,14 @@ function ThemeProvider({
     root.classList.remove("light", "dark");
     root.classList.add(resolvedTheme);
   }, [theme]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    document.documentElement.dataset.backgroundPattern = backgroundPattern;
+  }, [backgroundPattern]);
 
   useEffect(() => {
     if (typeof window === "undefined" || theme !== "system") {
@@ -77,7 +103,20 @@ function ThemeProvider({
     }
   };
 
-  const value: ThemeProviderState = { theme, setTheme };
+  const setBackgroundPattern = (pattern: ThemeBackgroundPattern) => {
+    setBackgroundPatternState(pattern);
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(patternStorageKey, pattern);
+    }
+  };
+
+  const value: ThemeProviderState = {
+    theme,
+    setTheme,
+    backgroundPattern,
+    setBackgroundPattern,
+  };
 
   return (
     <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

@@ -89,6 +89,15 @@
   --chart-4: oklch(55.3% 0.195 38.402);
   --chart-5: oklch(51.4% 0.222 16.935);
   --radius: 0.625rem;
+  --background-pattern-image: none;
+  --background-pattern-size: auto;
+  --background-pattern-position: 0 0;
+  --background-pattern-blend: normal;
+  --background-pattern-stroke: color-mix(
+    in oklch,
+    var(--border) 55%,
+    transparent
+  );
 }
 
 .dark {
@@ -128,6 +137,11 @@
   --chart-3: oklch(62.7% 0.265 303.9);
   --chart-4: oklch(70.5% 0.213 47.604);
   --chart-5: oklch(64.5% 0.246 16.439);
+  --background-pattern-stroke: color-mix(
+    in oklch,
+    var(--border) 45%,
+    transparent
+  );
 }
 
 @layer base {
@@ -150,6 +164,11 @@
     background-color: var(--background);
     color: var(--foreground);
     overscroll-behavior: none;
+    background-image: var(--background-pattern-image);
+    background-size: var(--background-pattern-size);
+    background-position: var(--background-pattern-position);
+    background-repeat: repeat;
+    background-blend-mode: var(--background-pattern-blend);
   }
   .root {
     isolation: isolate;
@@ -165,4 +184,46 @@
     background: var(--border);
     border-radius: 4px;
   }
+}
+
+:root[data-background-pattern="cross"] {
+  --background-pattern-image:
+    linear-gradient(
+      90deg,
+      transparent calc(50% - 1px),
+      var(--background-pattern-stroke) calc(50% - 1px),
+      var(--background-pattern-stroke) calc(50% + 1px),
+      transparent calc(50% + 1px)
+    ),
+    linear-gradient(
+      transparent calc(50% - 1px),
+      var(--background-pattern-stroke) calc(50% - 1px),
+      var(--background-pattern-stroke) calc(50% + 1px),
+      transparent calc(50% + 1px)
+    );
+  --background-pattern-size: 32px 32px;
+  --background-pattern-position: 0 0;
+}
+
+:root[data-background-pattern="dots"] {
+  --background-pattern-image: radial-gradient(
+    circle at center,
+    color-mix(in oklch, var(--background-pattern-stroke) 90%, transparent) 1px,
+    transparent 1px
+  );
+  --background-pattern-size: 28px 28px;
+  --background-pattern-position: 0 0;
+}
+
+:root[data-background-pattern="lines"] {
+  --background-pattern-image: linear-gradient(
+    var(--background-pattern-stroke) 1px,
+    transparent 1px
+  );
+  --background-pattern-size: 100% 28px;
+  --background-pattern-position: 0 0;
+}
+
+:root[data-background-pattern="none"] {
+  --background-pattern-image: none;
 }

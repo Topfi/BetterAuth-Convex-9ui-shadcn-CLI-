@@ -76,6 +76,12 @@ export const purgeAccount = mutation({
       await Promise.all(rateLimitEntries.map((doc) => ctx.db.delete(doc._id)));
     }
 
+    const userSettings = await ctx.db
+      .query("userSettings")
+      .withIndex("by_identitySubject", (q) => q.eq("identitySubject", subject))
+      .collect();
+    await Promise.all(userSettings.map((doc) => ctx.db.delete(doc._id)));
+
     return purgeAccountResultSchema.parse({ success: true as const });
   },
 });

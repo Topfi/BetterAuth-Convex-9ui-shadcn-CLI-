@@ -1,6 +1,9 @@
+import { useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useConvexAuth, useQuery } from "convex/react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTheme } from "@/providers/theme-context";
+import { defaultThemeSettings } from "@/shared/settings/theme";
 import { api } from "../../convex/_generated/api";
 
 export function SessionFallback() {
@@ -22,6 +25,28 @@ export function Protected() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const location = useLocation();
   const me = useQuery(api.identity.getMe, isAuthenticated ? {} : "skip");
+  const themeSettings = useQuery(
+    api.settings_theme.getPreferences,
+    isAuthenticated ? {} : "skip",
+  );
+  const { theme, setTheme, backgroundPattern, setBackgroundPattern } =
+    useTheme();
+
+  useEffect(() => {
+    if (themeSettings === undefined) {
+      return;
+    }
+
+    const nextSettings = themeSettings ?? defaultThemeSettings;
+
+    if (theme !== nextSettings.mode) {
+      setTheme(nextSettings.mode);
+    }
+
+    if (backgroundPattern !== nextSettings.backgroundPattern) {
+      setBackgroundPattern(nextSettings.backgroundPattern);
+    }
+  }, [backgroundPattern, setBackgroundPattern, setTheme, theme, themeSettings]);
 
   const loadingUser = isAuthenticated && me === undefined;
   if (isLoading || loadingUser) {
