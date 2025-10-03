@@ -43,7 +43,17 @@ describe("SettingsApplet", () => {
       if (query === api.settings_theme.getPreferences) {
         return {
           mode: "light",
-          backgroundPattern: "cross",
+          backgroundPattern: "dots",
+          accent: "blue",
+        };
+      }
+      if (query === api.settings_localization.getPreferences) {
+        return {
+          timeZone: "system",
+          dateFormat: "system",
+          timeFormat: "system",
+          showSeconds: true,
+          language: "en",
         };
       }
       return undefined;
@@ -69,6 +79,9 @@ describe("SettingsApplet", () => {
     expect(screen.getByText("Settings")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "General" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Theme" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Localization" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Profile" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Privacy" })).toBeInTheDocument();
   });

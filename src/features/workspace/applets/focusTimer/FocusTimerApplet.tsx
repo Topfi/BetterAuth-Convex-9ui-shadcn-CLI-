@@ -1,223 +1,161 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Slider, SliderValue } from "@/components/ui/slider";
-
-const QUICK_PRESETS = [15, 25, 50];
-
-const MS_IN_MINUTE = 60_000;
-
-const formatTime = (ms: number) => {
-  const totalSeconds = Math.max(0, Math.round(ms / 1_000));
-  const minutes = Math.floor(totalSeconds / 60)
-    .toString()
-    .padStart(2, "0");
-  const seconds = (totalSeconds % 60).toString().padStart(2, "0");
-  return `${minutes}:${seconds}`;
-};
+const PRESETS = [
+  { id: "focus", label: "Focus", minutes: 25 },
+  { id: "deep", label: "Deep Work", minutes: 50 },
+  { id: "break", label: "Reset", minutes: 10 },
+] as const;
 
 export function FocusTimerApplet() {
-  const [durationMinutes, setDurationMinutes] = useState(25);
+  const [minutes, setMinutes] = useState(PRESETS[0].minutes);
   const [isRunning, setIsRunning] = useState(false);
-  const [remainingMs, setRemainingMs] = useState(
-    () => durationMinutes * MS_IN_MINUTE,
+  const [remainingSeconds, setRemainingSeconds] = useState(
+    PRESETS[0].minutes * 60,
   );
-  const intervalRef = useRef<number | null>(null);
+  const [activePreset, setActivePreset] = useState<string>(PRESETS[0].id);
 
-  const totalMs = durationMinutes * MS_IN_MINUTE;
-  const progress =
-    totalMs === 0 ? 0 : ((totalMs - remainingMs) / totalMs) * 100;
+  const totalSeconds = minutes * 60;
+  const progress = totalSeconds
+    ? Math.min(1, Math.max(0, 1 - remainingSeconds / totalSeconds))
+    : 0;
+
+  useEffect(() => {
+    setRemainingSeconds(minutes * 60);
+    setIsRunning(false);
+  }, [minutes]);
 
   useEffect(() => {
     if (!isRunning) {
-      if (intervalRef.current !== null) {
-        window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      return;
+      return undefined;
     }
 
-    intervalRef.current = window.setInterval(() => {
-      setRemainingMs((current) => Math.max(0, current - 1_000));
-    }, 1_000);
+    const interval = window.setInterval(() => {
+      setRemainingSeconds((current) => {
+        if (current <= 1) {
+          setIsRunning(false);
+          return 0;
+        }
 
-    return () => {
-      if (intervalRef.current !== null) {
-        window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(interval);
   }, [isRunning]);
 
-  useEffect(() => {
-    if (remainingMs === 0 && isRunning) {
-      setIsRunning(false);
-    }
-  }, [isRunning, remainingMs]);
-
-  useEffect(() => {
-    if (!isRunning) {
-      setRemainingMs(durationMinutes * MS_IN_MINUTE);
-    }
-  }, [durationMinutes, isRunning]);
-
-  const handlePresetClick = (minutes: number) => {
-    setDurationMinutes(minutes);
-  };
-
-  const handleSliderChange = (value: number[]) => {
-    const [minutes] = value;
-    setDurationMinutes(minutes);
-  };
-
-  const handleToggle = () => {
-    if (remainingMs === 0) {
-      setRemainingMs(durationMinutes * MS_IN_MINUTE);
-    }
-    setIsRunning((current) => !current);
-  };
-
-  const handleReset = () => {
-    setIsRunning(false);
-    setRemainingMs(durationMinutes * MS_IN_MINUTE);
-  };
-
-  const handleAddMinute = () => {
-    setDurationMinutes((current) => Math.min(90, current + 5));
-  };
-
-  const handleSubtractMinute = () => {
-    setDurationMinutes((current) => Math.max(5, current - 5));
-  };
-
-  const statusLabel =
-    remainingMs === 0 ? "Session complete" : isRunning ? "In session" : "Ready";
+  const minutesPart = Math.floor(remainingSeconds / 60)
+    .toString()
+    .padStart(2, "0");
+  const secondsPart = (remainingSeconds % 60).toString().padStart(2, "0");
+  const formattedTime = `${minutesPart}:${secondsPart}`;
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-4">
-        <CardTitle>Focus Timer</CardTitle>
-        <CardDescription>
-          Structure deep work bursts with mindful breaks—stay in flow without
-          watching the clock.
-        </CardDescription>
-        <Badge
-          variant={
-            isRunning ? "success" : remainingMs === 0 ? "info" : "secondary"
-          }
-        >
-          {statusLabel}
-        </Badge>
-      </CardHeader>
-
-      <CardContent className="flex flex-1 flex-col gap-6">
-        <div className="flex items-end justify-between gap-4">
+    <div className="flex h-full flex-col gap-5 p-4 text-sm">
+      <div className="rounded-xl border border-border/60 bg-gradient-to-br from-amber-100/60 via-background to-background p-4 shadow-sm dark:from-amber-500/10">
+        <div className="flex justify-between gap-3">
           <div>
-            <p className="text-muted-foreground text-xs uppercase tracking-wide">
-              Remaining
-            </p>
-            <p
-              className="font-semibold text-5xl tabular-nums"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              {formatTime(remainingMs)}
+            <h2 className="text-base font-semibold">Focus Timer</h2>
+            <p className="text-xs text-muted-foreground">
+              Pick a cadence, press start, and stay in flow without leaving the
+              workspace.
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleSubtractMinute}
-              disabled={isRunning || durationMinutes <= 5}
-            >
-              -5m
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAddMinute}
-              disabled={isRunning || durationMinutes >= 90}
-            >
-              +5m
-            </Button>
-          </div>
-        </div>
-
-        <div>
-          <Slider
-            min={5}
-            max={90}
-            step={5}
-            value={[durationMinutes]}
-            onValueChange={handleSliderChange}
-            disabled={isRunning}
-            aria-label="Session length in minutes"
+          <span
+            aria-live="polite"
+            className="rounded-full border border-border/60 bg-background px-3 py-1 text-xs font-medium"
           >
-            <SliderValue>{durationMinutes} minute session</SliderValue>
-          </Slider>
+            {isRunning
+              ? "In session"
+              : remainingSeconds === 0
+                ? "Complete"
+                : "Idle"}
+          </span>
         </div>
-
-        <div className="grid grid-cols-3 gap-2">
-          {QUICK_PRESETS.map((minutes) => (
-            <Button
-              key={minutes}
-              type="button"
-              variant={minutes === durationMinutes ? "default" : "ghost"}
-              size="sm"
-              onClick={() => handlePresetClick(minutes)}
-              disabled={isRunning}
-            >
-              {minutes} min
-            </Button>
-          ))}
-        </div>
-
-        <div className="mt-auto space-y-2">
-          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className="bg-primary h-full transition-all duration-500"
-              style={{ width: `${progress}%` }}
-              role="progressbar"
-              aria-valuenow={Math.round(progress)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            />
+        <div className="mt-5 grid place-items-center">
+          <div
+            className="relative grid h-40 w-40 place-items-center rounded-full"
+            style={{
+              backgroundImage: `conic-gradient(hsl(var(--primary)) ${
+                progress * 360
+              }deg, hsl(var(--muted)) ${progress * 360}deg)`,
+            }}
+          >
+            <div className="grid h-32 w-32 place-items-center rounded-full bg-background text-3xl font-semibold">
+              {formattedTime}
+            </div>
           </div>
-          <p className="text-muted-foreground text-xs" aria-live="polite">
-            {remainingMs === 0
-              ? "Great job—take a breather before your next session."
-              : isRunning
-                ? "Timer locked in. Stay focused until the chime."
-                : "Press start when you are ready to focus."}
-          </p>
         </div>
-      </CardContent>
+      </div>
 
-      <CardFooter className="flex gap-2 pt-4">
-        <Button type="button" onClick={handleToggle} className="flex-1">
-          {isRunning ? "Pause" : remainingMs === 0 ? "Restart" : "Start"}
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={handleReset}
-          disabled={remainingMs === totalMs && !isRunning}
-        >
-          Reset
-        </Button>
-      </CardFooter>
-    </Card>
+      <div className="flex flex-col gap-4 rounded-xl border border-border/60 px-4 py-3">
+        <fieldset className="flex flex-wrap gap-2" aria-label="Timer presets">
+          {PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => {
+                setMinutes(preset.minutes);
+                setActivePreset(preset.id);
+              }}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                activePreset === preset.id
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border"
+              }`}
+            >
+              {preset.label} · {preset.minutes}m
+            </button>
+          ))}
+        </fieldset>
+        <label className="flex flex-col gap-2 text-xs font-medium">
+          Custom length
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={5}
+              max={120}
+              step={5}
+              value={minutes}
+              onChange={(event) => {
+                setActivePreset("custom");
+                setMinutes(Number(event.target.value));
+              }}
+              className="h-2 flex-1 appearance-none rounded-full bg-muted"
+            />
+            <span className="w-12 text-right text-xs text-muted-foreground">
+              {minutes}m
+            </span>
+          </div>
+        </label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="flex-1 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            onClick={() => {
+              if (isRunning) {
+                setIsRunning(false);
+                return;
+              }
+              if (remainingSeconds === 0) {
+                setRemainingSeconds(totalSeconds);
+              }
+              setIsRunning(true);
+            }}
+          >
+            {isRunning ? "Pause" : remainingSeconds === 0 ? "Restart" : "Start"}
+          </button>
+          <button
+            type="button"
+            className="rounded-md border border-border px-3 py-2 text-xs font-medium transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            onClick={() => {
+              setIsRunning(false);
+              setRemainingSeconds(totalSeconds);
+            }}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

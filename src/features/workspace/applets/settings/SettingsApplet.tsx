@@ -1,5 +1,5 @@
 import { useQuery } from "convex/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,20 +7,42 @@ import GeneralTab from "@/features/settings/general/GeneralTab";
 import ThemeTab from "@/features/settings/theme/ThemeTab";
 import ProfileTab from "@/features/settings/profile/ProfileTab";
 import PrivacyTab from "@/features/settings/privacy/PrivacyTab";
+import LocalizationTab from "@/features/settings/localization/LocalizationTab";
 import { api } from "@/convex/api";
+import { useSettingsLaunchCommand } from "@/features/workspace/applets/settings/useSettingsLaunchCommand";
+import type { SettingsTabId } from "@/features/workspace/applets/settings/types";
 
 const SETTINGS_TABS = [
   { value: "general", label: "General" },
   { value: "theme", label: "Theme" },
+  { value: "localization", label: "Localization" },
   { value: "profile", label: "Profile" },
   { value: "privacy", label: "Privacy" },
-] as const;
+] satisfies ReadonlyArray<{ value: SettingsTabId; label: string }>;
 
 export function SettingsApplet() {
   const currentUser = useQuery(api.auth.getCurrentUser);
   const identity = useQuery(api.identity.getMe, {});
-  const [activeTab, setActiveTab] =
-    useState<(typeof SETTINGS_TABS)[number]["value"]>("general");
+  const launchCommand = useSettingsLaunchCommand();
+  const [activeTab, setActiveTab] = useState<SettingsTabId>(
+    () => launchCommand?.tab ?? "general",
+  );
+  const lastHandledCommandIdRef = useRef<number | null>(
+    launchCommand?.requestId ?? null,
+  );
+
+  useEffect(() => {
+    if (!launchCommand) {
+      return;
+    }
+
+    if (launchCommand.requestId === lastHandledCommandIdRef.current) {
+      return;
+    }
+
+    setActiveTab(launchCommand.tab);
+    lastHandledCommandIdRef.current = launchCommand.requestId;
+  }, [launchCommand]);
 
   const isLoading = currentUser === undefined || identity === undefined;
 
@@ -67,6 +89,8 @@ export function SettingsApplet() {
                 )}
 
                 {activeTab === "theme" && <ThemeTab />}
+
+                {activeTab === "localization" && <LocalizationTab />}
 
                 {activeTab === "profile" && (
                   <>

@@ -10,6 +10,7 @@ const {
   useMutationMock,
   setThemeMock,
   setBackgroundPatternMock,
+  setAccentMock,
   toastErrorMock,
   mutationCalls,
 } = vi.hoisted(() => ({
@@ -17,6 +18,7 @@ const {
   useMutationMock: vi.fn(),
   setThemeMock: vi.fn(),
   setBackgroundPatternMock: vi.fn(),
+  setAccentMock: vi.fn(),
   toastErrorMock: vi.fn(),
   mutationCalls: [] as ThemeSettings[],
 }));
@@ -30,8 +32,10 @@ vi.mock("@/providers/theme-context", () => ({
   useTheme: () => ({
     theme: "light",
     setTheme: setThemeMock,
-    backgroundPattern: "cross",
+    backgroundPattern: "dots",
     setBackgroundPattern: setBackgroundPatternMock,
+    accent: "blue",
+    setAccent: setAccentMock,
   }),
 }));
 
@@ -52,7 +56,8 @@ vi.mock("@/lib/toast", () => ({
 describe("ThemeTab", () => {
   const defaultSettings: ThemeSettings = {
     mode: "light",
-    backgroundPattern: "cross",
+    backgroundPattern: "dots",
+    accent: "blue",
   };
 
   beforeEach(() => {
@@ -60,6 +65,7 @@ describe("ThemeTab", () => {
     useMutationMock.mockReset();
     setThemeMock.mockReset();
     setBackgroundPatternMock.mockReset();
+    setAccentMock.mockReset();
     toastErrorMock.mockReset();
     mutationCalls.length = 0;
 
@@ -107,24 +113,49 @@ describe("ThemeTab", () => {
   it("renders the current preferences", async () => {
     render(<ThemeTab />);
 
-    expect(await screen.findByLabelText("Light")).toBeChecked();
-    expect(await screen.findByLabelText("Cross")).toBeChecked();
+    expect(await screen.findByRole("radio", { name: "Light" })).toBeChecked();
+    expect(await screen.findByRole("radio", { name: "Dots" })).toBeChecked();
   });
 
   it("updates the theme mode optimistically", async () => {
     render(<ThemeTab />);
 
-    const darkOption = await screen.findByLabelText("Dark");
+    const darkOption = await screen.findByRole("radio", { name: "Dark" });
     await act(async () => {
       fireEvent.click(darkOption);
     });
 
     expect(setThemeMock).toHaveBeenCalledWith("dark");
-    expect(setBackgroundPatternMock).toHaveBeenCalledWith("cross");
+    expect(setBackgroundPatternMock).toHaveBeenCalledWith("dots");
+    expect(setAccentMock).toHaveBeenCalledWith("blue");
     expect(mutationCalls).toHaveLength(1);
     expect(mutationCalls[0]).toEqual({
       mode: "dark",
-      backgroundPattern: "cross",
+      backgroundPattern: "dots",
+      accent: "blue",
+    });
+    expect(toastErrorMock).not.toHaveBeenCalled();
+  });
+
+  it("updates the theme mode when selecting the card", async () => {
+    render(<ThemeTab />);
+
+    const darkOption = await screen.findByRole("radio", { name: "Dark" });
+    const darkCard = darkOption.closest("label");
+    expect(darkCard).not.toBeNull();
+
+    await act(async () => {
+      fireEvent.click(darkCard ?? darkOption);
+    });
+
+    expect(setThemeMock).toHaveBeenCalledWith("dark");
+    expect(setBackgroundPatternMock).toHaveBeenCalledWith("dots");
+    expect(setAccentMock).toHaveBeenCalledWith("blue");
+    expect(mutationCalls).toHaveLength(1);
+    expect(mutationCalls[0]).toEqual({
+      mode: "dark",
+      backgroundPattern: "dots",
+      accent: "blue",
     });
     expect(toastErrorMock).not.toHaveBeenCalled();
   });
@@ -132,16 +163,36 @@ describe("ThemeTab", () => {
   it("updates the background pattern optimistically", async () => {
     render(<ThemeTab />);
 
-    const dotsOption = await screen.findByLabelText("Dots");
+    const dotsOption = await screen.findByRole("radio", { name: "Dots" });
     await act(async () => {
       fireEvent.click(dotsOption);
     });
 
     expect(setBackgroundPatternMock).toHaveBeenCalledWith("dots");
+    expect(setAccentMock).toHaveBeenCalledWith("blue");
     expect(mutationCalls).toHaveLength(1);
     expect(mutationCalls[0]).toEqual({
       mode: "light",
       backgroundPattern: "dots",
+      accent: "blue",
+    });
+    expect(toastErrorMock).not.toHaveBeenCalled();
+  });
+
+  it("updates the accent color optimistically", async () => {
+    render(<ThemeTab />);
+
+    const violetOption = await screen.findByRole("radio", { name: "Violet" });
+    await act(async () => {
+      fireEvent.click(violetOption);
+    });
+
+    expect(setAccentMock).toHaveBeenCalledWith("violet");
+    expect(mutationCalls).toHaveLength(1);
+    expect(mutationCalls[0]).toEqual({
+      mode: "light",
+      backgroundPattern: "dots",
+      accent: "violet",
     });
     expect(toastErrorMock).not.toHaveBeenCalled();
   });

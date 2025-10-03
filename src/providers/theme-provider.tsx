@@ -7,8 +7,12 @@ import {
 } from "./theme-context";
 import {
   defaultThemeSettings,
+  themeAccentSchema,
+  themeBackgroundPatternSchema,
+  type ThemeAccent,
   type ThemeBackgroundPattern,
 } from "@/shared/settings/theme";
+import { ACCENT_TOKENS } from "./theme-accent-tokens";
 
 type ThemeProviderProps = {
   children: ReactNode;
@@ -22,6 +26,7 @@ function ThemeProvider({
   storageKey = "vite-ui-theme",
 }: ThemeProviderProps) {
   const patternStorageKey = `${storageKey}:background-pattern`;
+  const accentStorageKey = `${storageKey}:accent`;
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === "undefined") {
       return defaultTheme;
@@ -38,12 +43,45 @@ function ThemeProvider({
         return defaultThemeSettings.backgroundPattern;
       }
 
-      const storedPattern = window.localStorage.getItem(
-        patternStorageKey,
-      ) as ThemeBackgroundPattern | null;
+      const storedPattern = window.localStorage.getItem(patternStorageKey);
+      if (!storedPattern) {
+        return defaultThemeSettings.backgroundPattern;
+      }
 
-      return storedPattern ?? defaultThemeSettings.backgroundPattern;
+      const parsed = themeBackgroundPatternSchema.safeParse(storedPattern);
+
+      if (parsed.success) {
+        return parsed.data;
+      }
+
+      window.localStorage.setItem(
+        patternStorageKey,
+        defaultThemeSettings.backgroundPattern,
+      );
+
+      return defaultThemeSettings.backgroundPattern;
     });
+
+  const [accent, setAccentState] = useState<ThemeAccent>(() => {
+    if (typeof window === "undefined") {
+      return defaultThemeSettings.accent;
+    }
+
+    const storedAccent = window.localStorage.getItem(accentStorageKey);
+    if (!storedAccent) {
+      return defaultThemeSettings.accent;
+    }
+
+    const parsed = themeAccentSchema.safeParse(storedAccent);
+
+    if (parsed.success) {
+      return parsed.data;
+    }
+
+    window.localStorage.setItem(accentStorageKey, defaultThemeSettings.accent);
+
+    return defaultThemeSettings.accent;
+  });
 
   useEffect(() => {
     if (typeof document === "undefined") {
@@ -64,6 +102,22 @@ function ThemeProvider({
 
     document.documentElement.dataset.backgroundPattern = backgroundPattern;
   }, [backgroundPattern]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const root = document.documentElement;
+    root.dataset.accent = accent;
+
+    const resolvedTheme = theme === "system" ? getSystemTheme() : theme;
+    const tokens = ACCENT_TOKENS[accent][resolvedTheme];
+
+    root.style.setProperty("--accent", tokens.accent);
+    root.style.setProperty("--accent-foreground", tokens.accentForeground);
+    root.style.setProperty("--ring", tokens.ring);
+  }, [accent, theme]);
 
   useEffect(() => {
     if (typeof window === "undefined" || theme !== "system") {
@@ -111,11 +165,21 @@ function ThemeProvider({
     }
   };
 
+  const setAccent = (nextAccent: ThemeAccent) => {
+    setAccentState(nextAccent);
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(accentStorageKey, nextAccent);
+    }
+  };
+
   const value: ThemeProviderState = {
     theme,
     setTheme,
     backgroundPattern,
     setBackgroundPattern,
+    accent,
+    setAccent,
   };
 
   return (

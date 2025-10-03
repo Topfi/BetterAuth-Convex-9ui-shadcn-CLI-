@@ -775,8 +775,12 @@ export default function SignIn() {
             {passphraseSignUpEnabled ? (
               <p className="text-center text-sm text-muted-foreground">
                 Don&apos;t have an account?{" "}
-                <Button type="button" variant="link" className="px-0" asChild>
-                  <Link to="/sign-up">Create one</Link>
+                <Button
+                  variant="link"
+                  className="px-0"
+                  render={<Link to="/sign-up" />}
+                >
+                  Create one
                 </Button>
               </p>
             ) : null}

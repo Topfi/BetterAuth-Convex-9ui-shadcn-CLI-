@@ -525,8 +525,12 @@ export default function SignUp() {
           <CardFooter className="flex flex-col gap-4">
             <p className="text-center text-sm text-muted-foreground">
               Already have an account?{" "}
-              <Button type="button" variant="link" className="px-0" asChild>
-                <Link to="/sign-in">Sign in</Link>
+              <Button
+                variant="link"
+                className="px-0"
+                render={<Link to="/sign-in" />}
+              >
+                Sign in
               </Button>
             </p>
           </CardFooter>

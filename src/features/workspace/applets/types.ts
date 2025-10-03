@@ -12,7 +12,6 @@ export type WorkspaceAppletMetadata = {
   icon: LucideIcon;
   description?: string;
   minSize?: WorkspaceAppletSize;
-  allowMultipleInstances?: boolean;
 };
 
 export type WorkspaceApplet = WorkspaceAppletMetadata & {

@@ -82,12 +82,6 @@ export const purgeAccount = mutation({
       .collect();
     await Promise.all(userSettings.map((doc) => ctx.db.delete(doc._id)));
 
-    const generatedApplets = await ctx.db
-      .query("generatedApplets")
-      .withIndex("byOwner", (q) => q.eq("identitySubject", subject))
-      .collect();
-    await Promise.all(generatedApplets.map((doc) => ctx.db.delete(doc._id)));
-
     return purgeAccountResultSchema.parse({ success: true as const });
   },
 });

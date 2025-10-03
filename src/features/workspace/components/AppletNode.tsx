@@ -2,7 +2,6 @@ import { NodeResizer, type NodeProps } from "@xyflow/react";
 import { X } from "lucide-react";
 
 import { getWorkspaceApplet } from "../applets/registry";
-import { AppletNodeContextProvider } from "../context";
 import type { AppletNodeData } from "../types";
 
 export function AppletNode({ id, data, selected }: NodeProps<AppletNodeData>) {
@@ -31,7 +30,7 @@ export function AppletNode({ id, data, selected }: NodeProps<AppletNodeData>) {
         <span>{data.label}</span>
         <button
           type="button"
-          className="text-foreground/80 hover:text-foreground transition"
+          className="inline-flex size-6 items-center justify-center rounded-sm text-foreground/80 transition hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
           aria-label={`Close ${data.label}`}
           onMouseDown={(event) => event.stopPropagation()}
           onClick={() => data.onRemove(id)}
@@ -49,15 +48,14 @@ export function AppletNode({ id, data, selected }: NodeProps<AppletNodeData>) {
         onPointerDown={(event) => event.stopPropagation()}
         onMouseDownCapture={(event) => event.stopPropagation()}
       >
-        <AppletNodeContextProvider value={{ nodeId: id, data }}>
-          {Body ? (
-            <Body />
-          ) : (
-            <div className="p-4 text-xs text-muted-foreground">
-              This applet is no longer available.
-            </div>
-          )}
-        </AppletNodeContextProvider>
+        {Body ? (
+          // Pass node id as applet instance id so applets can scope their data
+          <Body appletId={id} />
+        ) : (
+          <div className="p-4 text-xs text-muted-foreground">
+            This applet is no longer available.
+          </div>
+        )}
       </div>
     </div>
   );

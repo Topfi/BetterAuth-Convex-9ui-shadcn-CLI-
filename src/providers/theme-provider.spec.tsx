@@ -8,8 +8,12 @@ import {
   screen,
 } from "@testing-library/react";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { ACCENT_TOKENS } from "@/providers/theme-accent-tokens";
 import { useTheme } from "@/providers/theme-context";
-import type { ThemeBackgroundPattern } from "@/shared/settings/theme";
+import type {
+  ThemeAccent,
+  ThemeBackgroundPattern,
+} from "@/shared/settings/theme";
 
 type MockMediaQueryList = ReturnType<typeof createMockMediaQueryList>;
 
@@ -24,6 +28,10 @@ describe("ThemeProvider", () => {
     localStorage.clear();
     document.documentElement.classList.remove("light", "dark");
     delete document.documentElement.dataset.backgroundPattern;
+    delete document.documentElement.dataset.accent;
+    document.documentElement.style.removeProperty("--accent");
+    document.documentElement.style.removeProperty("--accent-foreground");
+    document.documentElement.style.removeProperty("--ring");
   });
 
   afterEach(() => {
@@ -37,7 +45,7 @@ describe("ThemeProvider", () => {
 
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(screen.getByTestId("theme-value").textContent).toBe("system");
-    expect(document.documentElement.dataset.backgroundPattern).toBe("cross");
+    expect(document.documentElement.dataset.backgroundPattern).toBe("dots");
   });
 
   test("persists selected theme and updates document classes", () => {
@@ -72,6 +80,49 @@ describe("ThemeProvider", () => {
     expect(localStorage.getItem("test-theme:background-pattern")).toBe("dots");
     expect(document.documentElement.dataset.backgroundPattern).toBe("dots");
     expect(screen.getByTestId("pattern-value").textContent).toBe("dots");
+  });
+
+  test("normalizes legacy background pattern values", () => {
+    localStorage.setItem("test-theme:background-pattern", "cross");
+
+    renderWithProvider(<ThemeProbe />);
+
+    expect(document.documentElement.dataset.backgroundPattern).toBe("dots");
+    expect(localStorage.getItem("test-theme:background-pattern")).toBe("dots");
+  });
+
+  test("persists accent selection and updates CSS variables", () => {
+    const accentToApply: ThemeAccent = "emerald";
+    const expectedTokens = ACCENT_TOKENS[accentToApply].light;
+
+    renderWithProvider(<AccentSetter accentToApply={accentToApply} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "apply accent" }));
+
+    expect(localStorage.getItem("test-theme:accent")).toBe(accentToApply);
+    expect(document.documentElement.dataset.accent).toBe(accentToApply);
+
+    const computed = getComputedStyle(document.documentElement);
+    expect(computed.getPropertyValue("--accent").trim()).toBe(
+      expectedTokens.accent,
+    );
+    expect(computed.getPropertyValue("--accent-foreground").trim()).toBe(
+      expectedTokens.accentForeground,
+    );
+    expect(computed.getPropertyValue("--ring").trim()).toBe(
+      expectedTokens.ring,
+    );
+    expect(screen.getByTestId("accent-value").textContent).toBe(accentToApply);
+  });
+
+  test("normalizes legacy accent values", () => {
+    localStorage.setItem("test-theme:accent", "magenta");
+
+    renderWithProvider(<AccentProbe />);
+
+    expect(document.documentElement.dataset.accent).toBe("blue");
+    expect(localStorage.getItem("test-theme:accent")).toBe("blue");
+    expect(screen.getByTestId("accent-value").textContent).toBe("blue");
   });
 });
 
@@ -134,6 +185,29 @@ function PatternSetter({ patternToApply }: PatternSetterProps) {
       <span data-testid="pattern-value">{backgroundPattern}</span>
     </>
   );
+}
+
+type AccentSetterProps = {
+  accentToApply: ThemeAccent;
+};
+
+function AccentSetter({ accentToApply }: AccentSetterProps) {
+  const { accent, setAccent } = useTheme();
+
+  return (
+    <>
+      <button type="button" onClick={() => setAccent(accentToApply)}>
+        apply accent
+      </button>
+      <span data-testid="accent-value">{accent}</span>
+    </>
+  );
+}
+
+function AccentProbe() {
+  const { accent } = useTheme();
+
+  return <span data-testid="accent-value">{accent}</span>;
 }
 
 function renderWithProvider(children: ReactNode) {

@@ -79,7 +79,11 @@ describe("getPreferences", () => {
       db: {
         query: createQueryMock({
           first: {
-            theme: { mode: "dark", backgroundPattern: "dots" },
+            theme: {
+              mode: "dark",
+              backgroundPattern: "dots",
+              accent: "violet",
+            },
           },
         }),
       },
@@ -87,7 +91,52 @@ describe("getPreferences", () => {
 
     const result = await testableGetPreferences._handler(ctx, {});
 
-    expect(result).toEqual({ mode: "dark", backgroundPattern: "dots" });
+    expect(result).toEqual({
+      mode: "dark",
+      backgroundPattern: "dots",
+      accent: "violet",
+    });
+  });
+
+  it("normalizes legacy background patterns", async () => {
+    const ctx: QueryCtx = {
+      auth: {
+        getUserIdentity: identitySpy,
+      },
+      db: {
+        query: createQueryMock({
+          first: {
+            theme: { mode: "light", backgroundPattern: "cross" },
+          },
+        }),
+      },
+    };
+
+    const result = await testableGetPreferences._handler(ctx, {});
+
+    expect(result).toEqual(defaultThemeSettings);
+  });
+
+  it("defaults the accent when missing", async () => {
+    const ctx: QueryCtx = {
+      auth: {
+        getUserIdentity: identitySpy,
+      },
+      db: {
+        query: createQueryMock({
+          first: {
+            theme: {
+              mode: "light",
+              backgroundPattern: "dots",
+            },
+          },
+        }),
+      },
+    };
+
+    const result = await testableGetPreferences._handler(ctx, {});
+
+    expect(result.accent).toBe(defaultThemeSettings.accent);
   });
 });
 
@@ -107,14 +156,23 @@ describe("updatePreferences", () => {
     const result = await testableUpdatePreferences._handler(ctx, {
       mode: "dark",
       backgroundPattern: "lines",
+      accent: "emerald",
     });
 
-    expect(result).toEqual({ mode: "dark", backgroundPattern: "lines" });
+    expect(result).toEqual({
+      mode: "dark",
+      backgroundPattern: "lines",
+      accent: "emerald",
+    });
     expect(insertSpy).toHaveBeenCalledWith(
       "userSettings",
       expect.objectContaining({
         identitySubject: "user_1",
-        theme: { mode: "dark", backgroundPattern: "lines" },
+        theme: {
+          mode: "dark",
+          backgroundPattern: "lines",
+          accent: "emerald",
+        },
       }),
     );
   });
@@ -139,11 +197,20 @@ describe("updatePreferences", () => {
     const result = await testableUpdatePreferences._handler(ctx, {
       mode: "light",
       backgroundPattern: "none",
+      accent: "amber",
     });
 
-    expect(result).toEqual({ mode: "light", backgroundPattern: "none" });
+    expect(result).toEqual({
+      mode: "light",
+      backgroundPattern: "none",
+      accent: "amber",
+    });
     expect(patchSpy).toHaveBeenCalledWith("doc_123", {
-      theme: { mode: "light", backgroundPattern: "none" },
+      theme: {
+        mode: "light",
+        backgroundPattern: "none",
+        accent: "amber",
+      },
       updatedAt: expect.any(Number),
     });
   });

@@ -1,16 +1,17 @@
-import { Timer } from "lucide-react";
+import { AlarmClock } from "lucide-react";
 
 import type { WorkspaceApplet } from "../types";
 import { FocusTimerApplet } from "./FocusTimerApplet";
 
 export const focusTimerApplet: WorkspaceApplet = {
-  id: "focus_timer",
+  id: "focusTimer",
   name: "Focus Timer",
-  description: "Pomodoro-style pacing with smooth controls and quick presets.",
-  icon: Timer,
+  description:
+    "Pomodoro-style pacing with quick presets and a smooth progress ring.",
+  icon: AlarmClock,
   Component: FocusTimerApplet,
   minSize: {
-    width: 320,
-    height: 260,
+    width: 280,
+    height: 320,
   },
 };

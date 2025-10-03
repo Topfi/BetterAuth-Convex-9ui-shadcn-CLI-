@@ -1,16 +1,16 @@
-import { CalendarClock } from "lucide-react";
+import { CalendarCheck } from "lucide-react";
 
 import type { WorkspaceApplet } from "../types";
 import { StudyPlannerApplet } from "./StudyPlannerApplet";
 
 export const studyPlannerApplet: WorkspaceApplet = {
-  id: "studyPlanner",
+  id: "study_planner",
   name: "Study Planner",
-  description: "Layer med labs and coding sprints into a single weekly plan.",
-  icon: CalendarClock,
+  description: "Track deadlines and balance workloads across classes.",
+  icon: CalendarCheck,
   Component: StudyPlannerApplet,
   minSize: {
     width: 360,
-    height: 480,
+    height: 320,
   },
 };

@@ -1,6 +1,9 @@
 import { createContext, useContext } from "react";
 
-import type { ThemeBackgroundPattern } from "@/shared/settings/theme";
+import type {
+  ThemeAccent,
+  ThemeBackgroundPattern,
+} from "@/shared/settings/theme";
 
 type Theme = "dark" | "light" | "system";
 
@@ -9,6 +12,8 @@ type ThemeProviderState = {
   setTheme: (theme: Theme) => void;
   backgroundPattern: ThemeBackgroundPattern;
   setBackgroundPattern: (pattern: ThemeBackgroundPattern) => void;
+  accent: ThemeAccent;
+  setAccent: (accent: ThemeAccent) => void;
 };
 
 const ThemeContext = createContext<ThemeProviderState | null>(null);
