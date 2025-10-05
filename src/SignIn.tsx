@@ -652,7 +652,7 @@ export default function SignIn() {
                 </Form>
               ) : (
                 <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                  Email-based sign-in is currently disabled. Use the options
+                  Email-based sign-in is currently not enabled. Use the options
                   below or contact support for help.
                 </div>
               )

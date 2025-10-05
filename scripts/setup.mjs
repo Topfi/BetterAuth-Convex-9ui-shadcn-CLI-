@@ -460,27 +460,24 @@ function main() {
     }
 
     // Runs Convex CLI commands and writes .env.local; no automated test covers this path.
-    const canonicalPassphraseSignIn = canonicalizeBooleanString(
-      trimmedPassphraseSignIn,
-    );
+    const canonicalPassphraseSignIn =
+      canonicalizeBooleanString(trimmedPassphraseSignIn);
     if (trimmedPassphraseSignIn && canonicalPassphraseSignIn === null) {
       log(
         "WARN AUTH_PASSPHRASE_SIGN_IN has an unexpected value; defaulting to 'true'. Update the toggle after setup if needed.",
       );
     }
 
-    const canonicalPassphraseSignUp = canonicalizeBooleanString(
-      trimmedPassphraseSignUp,
-    );
+    const canonicalPassphraseSignUp =
+      canonicalizeBooleanString(trimmedPassphraseSignUp);
     if (trimmedPassphraseSignUp && canonicalPassphraseSignUp === null) {
       log(
         "WARN AUTH_PASSPHRASE_SIGN_UP has an unexpected value; defaulting to 'true'. Update the toggle after setup if needed.",
       );
     }
 
-    const canonicalMagicLinkSignIn = canonicalizeBooleanString(
-      trimmedMagicLinkSignIn,
-    );
+    const canonicalMagicLinkSignIn =
+      canonicalizeBooleanString(trimmedMagicLinkSignIn);
     if (trimmedMagicLinkSignIn && canonicalMagicLinkSignIn === null) {
       log(
         "WARN AUTH_MAGIC_LINK_SIGN_IN has an unexpected value; defaulting to 'true'. Update the toggle after setup if needed.",
@@ -613,7 +610,8 @@ function main() {
     envFile.upsertBlock({
       key: "AUTH_MAGIC_LINK_SIGN_IN",
       value: magicLinkSignInValue,
-      comment: "# Magic link sign-in toggle (true to offer magic link sign-in)",
+      comment:
+        "# Magic link sign-in toggle (true to offer magic link sign-in)",
       leadingBlank: true,
     });
 

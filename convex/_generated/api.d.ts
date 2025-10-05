@@ -25,9 +25,7 @@ import type * as identity from "../identity.js";
 import type * as rateLimitStorage from "../rateLimitStorage.js";
 import type * as settings_privacy from "../settings_privacy.js";
 import type * as settings_security from "../settings_security.js";
-import type * as settings_theme from "../settings_theme.js";
 import type * as util from "../util.js";
-import type * as workspace from "../workspace.js";
 
 import type {
   ApiFromModules,
@@ -61,9 +59,7 @@ declare const fullApi: ApiFromModules<{
   rateLimitStorage: typeof rateLimitStorage;
   settings_privacy: typeof settings_privacy;
   settings_security: typeof settings_security;
-  settings_theme: typeof settings_theme;
   util: typeof util;
-  workspace: typeof workspace;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 

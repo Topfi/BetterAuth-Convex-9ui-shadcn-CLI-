@@ -1,14 +1,10 @@
 import { createContext, useContext } from "react";
 
-import type { ThemeBackgroundPattern } from "@/shared/settings/theme";
-
 type Theme = "dark" | "light" | "system";
 
 type ThemeProviderState = {
   theme: Theme;
   setTheme: (theme: Theme) => void;
-  backgroundPattern: ThemeBackgroundPattern;
-  setBackgroundPattern: (pattern: ThemeBackgroundPattern) => void;
 };
 
 const ThemeContext = createContext<ThemeProviderState | null>(null);

@@ -7,6 +7,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"],
-  "exclude": ["src/components/Workspace.tsx"]
+  "include": ["src"]
 }

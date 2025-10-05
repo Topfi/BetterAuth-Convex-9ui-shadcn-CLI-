@@ -55,6 +55,13 @@ export const routes = [
             index: true,
             Component: WorkspacePage,
           },
+          {
+            path: "settings",
+            lazy: async () => ({
+              Component: (await import("@/routes/pages/WorkspaceSettingsPage"))
+                .default,
+            }),
+          },
         ],
       },
     ],

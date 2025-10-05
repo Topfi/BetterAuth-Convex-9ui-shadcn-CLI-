@@ -61,66 +61,6 @@ const schema = defineSchema({
   })
     .index("by_keyHash", ["keyHash"])
     .index("by_ipHash", ["ipHash"]),
-  workspaces: defineTable({
-    identitySubject: v.string(),
-    workspaceId: v.number(),
-    name: v.string(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_identitySubject", ["identitySubject"])
-    .index("by_identitySubject_workspaceId", ["identitySubject", "workspaceId"])
-    .index("by_identitySubject_name", ["identitySubject", "name"]),
-  workspaceNodes: defineTable({
-    identitySubject: v.string(),
-    workspaceId: v.number(),
-    nodeId: v.string(),
-    appletId: v.string(),
-    label: v.string(),
-    position: v.object({
-      x: v.number(),
-      y: v.number(),
-      z: v.number(),
-    }),
-    size: v.object({
-      width: v.number(),
-      height: v.number(),
-    }),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_identitySubject_workspaceId", ["identitySubject", "workspaceId"])
-    .index("by_identitySubject_workspaceId_nodeId", [
-      "identitySubject",
-      "workspaceId",
-      "nodeId",
-    ]),
-  workspaceViewports: defineTable({
-    identitySubject: v.string(),
-    workspaceId: v.number(),
-    position: v.object({
-      x: v.number(),
-      y: v.number(),
-    }),
-    zoom: v.number(),
-    updatedAt: v.number(),
-  }).index("by_identitySubject_workspaceId", [
-    "identitySubject",
-    "workspaceId",
-  ]),
-  userSettings: defineTable({
-    identitySubject: v.string(),
-    theme: v.object({
-      mode: v.union(v.literal("light"), v.literal("dark")),
-      backgroundPattern: v.union(
-        v.literal("cross"),
-        v.literal("dots"),
-        v.literal("lines"),
-        v.literal("none"),
-      ),
-    }),
-    updatedAt: v.number(),
-  }).index("by_identitySubject", ["identitySubject"]),
 });
 
 export default schema;

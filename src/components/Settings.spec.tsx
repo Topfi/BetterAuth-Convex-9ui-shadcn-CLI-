@@ -1,9 +1,9 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ThemeProvider } from "@/providers/theme-provider";
-import { SettingsApplet } from "./SettingsApplet";
+import Settings from "./Settings";
 import { api } from "@/convex/api";
 
 const useQueryMock = vi.fn();
@@ -14,19 +14,26 @@ vi.mock("convex/react", () => ({
   useMutation: (mutation: unknown) => useMutationMock(mutation),
 }));
 
-describe("SettingsApplet", () => {
+const navigateMock = vi.fn();
+
+vi.mock("react-router-dom", async () => {
+  const actual =
+    await vi.importActual<typeof import("react-router-dom")>(
+      "react-router-dom",
+    );
+
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
+
+describe("Settings", () => {
   beforeEach(() => {
+    navigateMock.mockReset();
     useQueryMock.mockReset();
     useMutationMock.mockReset();
-    useMutationMock.mockImplementation(() => {
-      const mutate = vi.fn();
-      (
-        mutate as typeof mutate & {
-          withOptimisticUpdate: typeof mutate;
-        }
-      ).withOptimisticUpdate = vi.fn(() => mutate);
-      return mutate;
-    });
+    useMutationMock.mockReturnValue(vi.fn());
     useQueryMock.mockImplementation((query) => {
       if (query === api.auth.getCurrentUser) {
         return {
@@ -40,10 +47,11 @@ describe("SettingsApplet", () => {
           usernameLower: "person",
         };
       }
-      if (query === api.settings_theme.getPreferences) {
+      if (query === api.settings_security.getOverview) {
         return {
-          mode: "light",
-          backgroundPattern: "cross",
+          hasPassphrase: true,
+          twoFactorEnabled: false,
+          risks: [],
         };
       }
       return undefined;
@@ -59,17 +67,24 @@ describe("SettingsApplet", () => {
     document.documentElement.classList.remove("light", "dark");
   });
 
-  it("renders the settings tabs", () => {
+  it("renders tabs and navigates back to the workspace", () => {
     render(
       <ThemeProvider>
-        <SettingsApplet />
+        <Settings />
       </ThemeProvider>,
     );
 
-    expect(screen.getByText("Settings")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "General" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Theme" })).toBeInTheDocument();
+    const backButton = screen.getByRole("button", {
+      name: /back to workspace/i,
+    });
+
+    expect(backButton).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Profile" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Security" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Privacy" })).toBeInTheDocument();
+
+    fireEvent.click(backButton);
+
+    expect(navigateMock).toHaveBeenCalledWith("/workspace");
   });
 });

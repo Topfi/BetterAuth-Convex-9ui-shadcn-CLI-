@@ -1,1 +1,0 @@
-export { settingsApplet } from "./metadata";

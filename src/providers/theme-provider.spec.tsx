@@ -9,7 +9,6 @@ import {
 } from "@testing-library/react";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { useTheme } from "@/providers/theme-context";
-import type { ThemeBackgroundPattern } from "@/shared/settings/theme";
 
 type MockMediaQueryList = ReturnType<typeof createMockMediaQueryList>;
 
@@ -23,7 +22,6 @@ describe("ThemeProvider", () => {
     );
     localStorage.clear();
     document.documentElement.classList.remove("light", "dark");
-    delete document.documentElement.dataset.backgroundPattern;
   });
 
   afterEach(() => {
@@ -37,7 +35,6 @@ describe("ThemeProvider", () => {
 
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(screen.getByTestId("theme-value").textContent).toBe("system");
-    expect(document.documentElement.dataset.backgroundPattern).toBe("cross");
   });
 
   test("persists selected theme and updates document classes", () => {
@@ -62,16 +59,6 @@ describe("ThemeProvider", () => {
     act(() => mediaQueryList.setMatches(true));
 
     expect(document.documentElement.classList.contains("dark")).toBe(true);
-  });
-
-  test("persists background pattern selection", () => {
-    renderWithProvider(<PatternSetter patternToApply="dots" />);
-
-    fireEvent.click(screen.getByRole("button", { name: "apply pattern" }));
-
-    expect(localStorage.getItem("test-theme:background-pattern")).toBe("dots");
-    expect(document.documentElement.dataset.backgroundPattern).toBe("dots");
-    expect(screen.getByTestId("pattern-value").textContent).toBe("dots");
   });
 });
 
@@ -114,26 +101,6 @@ function SystemModeWatcher() {
   }, [setTheme]);
 
   return <span data-testid="theme-value">system</span>;
-}
-
-type PatternSetterProps = {
-  patternToApply: ThemeBackgroundPattern;
-};
-
-function PatternSetter({ patternToApply }: PatternSetterProps) {
-  const { backgroundPattern, setBackgroundPattern } = useTheme();
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setBackgroundPattern(patternToApply)}
-      >
-        apply pattern
-      </button>
-      <span data-testid="pattern-value">{backgroundPattern}</span>
-    </>
-  );
 }
 
 function renderWithProvider(children: ReactNode) {
