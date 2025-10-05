@@ -19,11 +19,9 @@
     "audit": "node scripts/guardrails.cjs && node scripts/consistency-check.mjs --report && npx secretlint \"**/*\" && node scripts/run-gitleaks.mjs detect --no-banner --redact --no-git -v && npm audit --audit-level=moderate --production"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^2.0.42",
     "@base-ui-components/react": "^1.0.0-beta.3",
     "@codesandbox/sandpack-react": "^2.20.0",
     "@codesandbox/sandpack-themes": "^2.0.21",
-    "@convex-dev/agent": "^0.2.10",
     "@convex-dev/better-auth": "^0.8.5",
     "@convex-dev/crons": "^0.1.9",
     "@convex-dev/resend": "^0.1.13",
@@ -52,7 +50,6 @@
     "react-router-dom": "^7.9.1",
     "recharts": "^3.2.1",
     "resend": "^6.1.0",
-    "slugify": "^1.6.6",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.13",
     "tw-animate-css": "^1.3.8",

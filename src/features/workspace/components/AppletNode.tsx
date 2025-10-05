@@ -2,7 +2,6 @@ import { NodeResizer, type NodeProps } from "@xyflow/react";
 import { X } from "lucide-react";
 
 import { getWorkspaceApplet } from "../applets/registry";
-import { AppletNodeContextProvider } from "../context";
 import type { AppletNodeData } from "../types";
 
 export function AppletNode({ id, data, selected }: NodeProps<AppletNodeData>) {
@@ -49,15 +48,13 @@ export function AppletNode({ id, data, selected }: NodeProps<AppletNodeData>) {
         onPointerDown={(event) => event.stopPropagation()}
         onMouseDownCapture={(event) => event.stopPropagation()}
       >
-        <AppletNodeContextProvider value={{ nodeId: id, data }}>
-          {Body ? (
-            <Body />
-          ) : (
-            <div className="p-4 text-xs text-muted-foreground">
-              This applet is no longer available.
-            </div>
-          )}
-        </AppletNodeContextProvider>
+        {Body ? (
+          <Body />
+        ) : (
+          <div className="p-4 text-xs text-muted-foreground">
+            This applet is no longer available.
+          </div>
+        )}
       </div>
     </div>
   );

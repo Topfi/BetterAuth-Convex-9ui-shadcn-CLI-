@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ThemeTab from "./ThemeTab";
+import { api } from "@/convex/api";
 import type { ThemeSettings } from "@/shared/settings/theme";
 
 const {

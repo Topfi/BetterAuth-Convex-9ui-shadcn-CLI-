@@ -73,7 +73,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Toolbar, ToolbarButton, ToolbarGroup } from "@/components/ui/toolbar";
-import { CommandDialog } from "@/components/ui/command";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandShortcut,
+} from "@/components/ui/command";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -81,16 +89,12 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { AppletNode } from "@/features/workspace/components/AppletNode";
-import { StartMenu } from "@/features/workspace/components/StartMenu";
 import {
   getWorkspaceApplet,
   settingsApplet,
   workspaceApplets,
 } from "@/features/workspace/applets/registry";
-import {
-  buildNewAppletNode,
-  type NewAppletNode,
-} from "@/features/workspace/createAppletNode";
+import { buildNewAppletNode } from "@/features/workspace/createAppletNode";
 import type { AppletNodeData } from "@/features/workspace/types";
 import {
   workspaceNameSchema,
@@ -99,6 +103,7 @@ import {
 } from "../../shared/workspace";
 import { authClient } from "@/lib/auth-client";
 import { useTheme } from "@/providers/theme-context";
+
 const DEFAULT_VIEWPORT = { x: 0, y: 0, zoom: 0.75 };
 
 type ConnectionStatus = "connected" | "disconnected";
@@ -303,12 +308,6 @@ type StartAppletLauncherProps = {
   onOpenChange: (open: boolean) => void;
   onOpenApplet: (appletId: string) => void;
   openApplets: ReadonlySet<string>;
-  nodes: Node<AppletNodeData>[];
-  onAddNode: (
-    node: NewAppletNode["node"],
-    persistence: NewAppletNode["persistence"],
-  ) => void;
-  onRemoveNode: (id: string) => void;
 };
 
 function StartAppletLauncher({
@@ -316,20 +315,10 @@ function StartAppletLauncher({
   onOpenChange,
   onOpenApplet,
   openApplets,
-  nodes,
-  onAddNode,
-  onRemoveNode,
 }: StartAppletLauncherProps) {
   const sortedApplets = useMemo(
     () => [...workspaceApplets].sort((a, b) => a.name.localeCompare(b.name)),
     [workspaceApplets],
-  );
-
-  const existingCount = nodes.length;
-  const nextZIndex = useMemo(
-    () =>
-      nodes.reduce((acc, current) => Math.max(acc, current.zIndex ?? 0), 0) + 1,
-    [nodes],
   );
 
   const handleLaunch = useCallback(
@@ -341,7 +330,7 @@ function StartAppletLauncher({
         return;
       }
 
-      if (!applet.allowMultipleInstances && openApplets.has(applet.id)) {
+      if (openApplets.has(applet.id)) {
         toast.warning(`"${applet.name}" is already open in this workspace.`);
         return;
       }
@@ -359,16 +348,78 @@ function StartAppletLauncher({
       title="Start applet"
       description="Launch an applet in this workspace"
     >
-      <StartMenu
-        sortedApplets={sortedApplets}
-        openApplets={openApplets}
-        onSelectApplet={handleLaunch}
-        onClose={() => onOpenChange(false)}
-        addNode={onAddNode}
-        existingCount={existingCount}
-        nextZIndex={nextZIndex}
-        onRemoveNode={onRemoveNode}
-      />
+      <CommandInput placeholder="Search applets" autoFocus />
+      <CommandList>
+        <CommandEmpty>No applets found.</CommandEmpty>
+        <div className="border-b px-3 pb-4 pt-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Quick launch
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+            {sortedApplets.map((applet) => {
+              const Icon = applet.icon;
+              const isAlreadyOpen = openApplets.has(applet.id);
+              return (
+                <Button
+                  key={applet.id}
+                  type="button"
+                  variant="outline"
+                  className={cn(
+                    "flex h-auto flex-col items-center gap-2 py-3",
+                    isAlreadyOpen &&
+                      "cursor-not-allowed opacity-60 hover:opacity-60 focus-visible:ring-0",
+                  )}
+                  aria-disabled={isAlreadyOpen}
+                  onClick={() => {
+                    if (isAlreadyOpen) {
+                      toast.warning(
+                        `"${applet.name}" is already open in this workspace.`,
+                      );
+                      return;
+                    }
+                    handleLaunch(applet.id);
+                  }}
+                >
+                  <Icon className="size-5" aria-hidden />
+                  <span className="text-xs font-medium text-foreground sm:text-sm">
+                    {applet.name}
+                  </span>
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+        <CommandGroup heading="All applets">
+          {sortedApplets.map((applet) => {
+            const Icon = applet.icon;
+            const isAlreadyOpen = openApplets.has(applet.id);
+            return (
+              <CommandItem
+                key={applet.id}
+                value={`${applet.name} ${applet.id}`}
+                onSelect={() => {
+                  if (isAlreadyOpen) {
+                    toast.warning(
+                      `"${applet.name}" is already open in this workspace.`,
+                    );
+                    return;
+                  }
+                  handleLaunch(applet.id);
+                }}
+                className={cn(
+                  isAlreadyOpen &&
+                    "cursor-not-allowed opacity-60 data-[selected=true]:opacity-60",
+                )}
+                aria-disabled={isAlreadyOpen}
+              >
+                <Icon className="size-4" aria-hidden />
+                {applet.name}
+                {isAlreadyOpen ? <CommandShortcut>Open</CommandShortcut> : null}
+              </CommandItem>
+            );
+          })}
+        </CommandGroup>
+      </CommandList>
     </CommandDialog>
   );
 }
@@ -672,43 +723,6 @@ export default function Workspace() {
     [createWorkspaceNode],
   );
 
-  const handleAddNode = useCallback(
-    (
-      node: NewAppletNode["node"],
-      persistence: NewAppletNode["persistence"],
-    ) => {
-      if (!activeWorkspaceId) {
-        toast.error("Select a workspace before launching an applet.");
-        return;
-      }
-
-      setNodes((current) => [...current, node]);
-      setOpenApplets((current) => {
-        const next = new Set(current);
-        const applet = getWorkspaceApplet(persistence.appletId);
-        if (!applet?.allowMultipleInstances) {
-          next.add(persistence.appletId);
-        }
-        return next;
-      });
-
-      void createWorkspaceNodeOptimistic({
-        workspaceId: activeWorkspaceId,
-        nodeId: persistence.nodeId,
-        appletId: persistence.appletId,
-        label: persistence.label,
-        position: persistence.position,
-        size: persistence.size,
-      });
-    },
-    [
-      activeWorkspaceId,
-      createWorkspaceNodeOptimistic,
-      setNodes,
-      setOpenApplets,
-    ],
-  );
-
   const updateWorkspaceNodeOptimistic = useMemo(
     () =>
       updateWorkspaceNode.withOptimisticUpdate((localStore, args) => {
@@ -835,10 +849,7 @@ export default function Workspace() {
       if (targetAppletId) {
         setOpenApplets((current) => {
           const next = new Set(current);
-          const applet = getWorkspaceApplet(targetAppletId);
-          if (!applet?.allowMultipleInstances) {
-            next.delete(targetAppletId);
-          }
+          next.delete(targetAppletId);
           return next;
         });
       }
@@ -927,14 +938,7 @@ export default function Workspace() {
       return;
     }
 
-    const next = new Set<string>();
-    for (const node of persistedNodes ?? []) {
-      const applet = getWorkspaceApplet(node.appletId);
-      if (applet?.allowMultipleInstances) {
-        continue;
-      }
-      next.add(node.appletId);
-    }
+    const next = new Set((persistedNodes ?? []).map((node) => node.appletId));
     setOpenApplets(next);
   }, [persistedNodes, setOpenApplets]);
 
@@ -1002,26 +1006,54 @@ export default function Workspace() {
         return;
       }
 
-      if (!applet.allowMultipleInstances && openApplets.has(applet.id)) {
+      if (openApplets.has(applet.id)) {
         toast.info(`"${applet.name}" is already open in this workspace.`);
         return;
       }
 
-      const currentNodes = nodesRef.current;
-      const maxZ = currentNodes.reduce(
-        (acc, candidate) => Math.max(acc, candidate.zIndex ?? 0),
-        0,
-      );
-      const { node, persistence } = buildNewAppletNode(
-        applet,
-        currentNodes.length,
-        maxZ + 1,
-        handleRemoveNode,
-      );
+      let persistence:
+        | ReturnType<typeof buildNewAppletNode>["persistence"]
+        | null = null;
 
-      handleAddNode(node, persistence);
+      setNodes((current) => {
+        const maxZ = current.reduce(
+          (acc, candidate) => Math.max(acc, candidate.zIndex ?? 0),
+          0,
+        );
+        const { node, persistence: details } = buildNewAppletNode(
+          applet,
+          current.length,
+          maxZ + 1,
+          handleRemoveNode,
+        );
+        persistence = details;
+        return [...current, node];
+      });
+
+      if (persistence) {
+        setOpenApplets((current) => {
+          const next = new Set(current);
+          next.add(applet.id);
+          return next;
+        });
+        void createWorkspaceNodeOptimistic({
+          workspaceId: activeWorkspaceId,
+          nodeId: persistence.nodeId,
+          appletId: persistence.appletId,
+          label: persistence.label,
+          position: persistence.position,
+          size: persistence.size,
+        });
+      }
     },
-    [handleAddNode, handleRemoveNode, openApplets],
+    [
+      activeWorkspaceId,
+      createWorkspaceNodeOptimistic,
+      handleRemoveNode,
+      openApplets,
+      setOpenApplets,
+      setNodes,
+    ],
   );
 
   const handleSignOut = useCallback(() => {
@@ -1377,9 +1409,6 @@ export default function Workspace() {
         onOpenChange={setIsStartOpen}
         onOpenApplet={handleOpenApplet}
         openApplets={openApplets}
-        nodes={nodes}
-        onAddNode={handleAddNode}
-        onRemoveNode={handleRemoveNode}
       />
       <Dialog
         open={isCreateWorkspaceOpen}

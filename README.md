@@ -1,86 +1,336 @@
-# Hominis
+<h3 align="center">A rather comprehensive Better Auth + Convex Implementation</h3>
 
-Hominis is an infinite canvas where you can generate your own applets, while everything stays in sync. The project is built for a local-first experience—the local user's interface never waits on the network—while remote clients receive smooth, interpolated playback.
+  <p align="center">
+    Essentially a few lines of code you were likely to write anyways.
+    <br />
+    <br />
+    &middot;
+    <a href="https://github.com/Topfi/BetterAuth-Convex-9ui-shadcn-CLI-/issues">Report Bug</a>
+    &middot;
+    <a href="https://github.com/Topfi/BetterAuth-Convex-9ui-shadcn-CLI-/pulls">Make a Pull request</a>
+  </p>
+</div>
 
-## Core Tenets
+[![React 19 badge](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=1a1a1a)](https://react.dev/)
+[![Vite badge](https://img.shields.io/badge/Vite-7.1-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Convex badge](https://img.shields.io/badge/Convex-1.27-3b82f6?logo=convex&logoColor=white)](https://www.convex.dev/)
+[![Better Auth badge](https://img.shields.io/badge/Better%20Auth-1.3-8a2be2)](https://www.better-auth.com/)
+[![TypeScript badge](https://img.shields.io/badge/TypeScript-5.9-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![9ui.dev badge](https://img.shields.io/badge/9ui.dev-UI%20primitives-111827?logo=tailwindcss&logoColor=38bdf8)](https://www.9ui.dev/)
+[![License: EUPL 1.2](https://img.shields.io/badge/License-EUPL%201.2-blue.svg)](https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12)
 
-- Local-first prime directive: render instantly locally and stream smooth motion remotely.
-- React 19 + Vite + TypeScript everywhere, with the React Compiler enabled by default.
-- Convex is the canonical data source; derive UI directly from `useQuery` without mirroring state.
-- Shared contracts (schemas, helpers, types) live in `shared/` and stay in sync across client and server.
-- Security, audit logging, and privacy flows evolve together; destructive operations are always observable and reversible.
-- Accessibility and theming are first-class—respect ARIA attributes, never strip focus outlines, and route theme changes through the global provider.
+A casual-but-capable Better Auth implementation that shows how Convex and React 19 play together, whilst keeping security and DX in mind. Ships with core flows wired up, well styled UI thanks to 9ui.dev, and enough polish that you can drop it into a demo or grow it into production.
 
-## Architecture at a Glance
+## Quick Setup Video
 
-- **Client runtime**: React 19 compiled by Vite with Tailwind and vendor primitives under `src/components/ui` (read-only).
-- **Realtime & storage**: Convex handles data, optimistic updates, background jobs, audit trails, and rate limiting.
-- **Identity**: Better Auth (via the template I build) powers passphrase, magic link, verification code, and OAuth flows via shared Zod contracts.
-- **Workspace canvas**: @xyflow/react renders applet graphs; applets share the common shell and live under `src/features/workspace/applets/<id>/` with colocated metadata.
-- **Automation**: Convex Agents and Sandpack-based runners back generated applets in `src/features/applets_generated/` and `convex/applets_generated.ts`.
-- **Shared abstractions**: Any cross-tier contract belongs in `shared/`; keep validation logic symmetric.
+<div align="center">
+  <img src="./public/setup.gif" alt="Animated walkthrough of the Better Auth setup" />
+</div>
 
-## Feature Highlights
+## Screenshots
 
-- **Local-first workspace** with optimistic transforms, interpolation, and replay for remote viewers.
-- **Composable applets** that reuse the shared node shell and register metadata for Workspace routing.
-- **End-to-end identity** including passphrase strength checks, OAuth linking, and account lifecycle management.
-- **Security & privacy guardrails** covering audit logs, rate limiting, and full workspace/account purgers.
-- **Generated agents** that execute Convex logic and Sandpack snippets for automated workflow assistance.
+| Welcome experience                                                    | Workspace overview                                                                | Terms view                                                                   |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| ![Screenshot of the welcome page](./public/WelcomePage.png)           | ![Screenshot of the workspace page](./public/WorkspacePage.png)                   | ![Screenshot of the terms page](./public/TermsPage.png)                      |
+| Passphrase strength feedback                                          | Generated passphrase modal                                                        | Profile settings surface                                                     |
+| ![Screenshot of the bad passphrase state](./public/BadPassphrase.png) | ![Screenshot of the generated passphrase modal](./public/GeneratedPassphrase.png) | ![Screenshot of the profile settings page](./public/ProfileSettingsPage.png) |
+
+## Features
+
+- **🔐 Full auth**: passphrase sign-up/sign-in, passphrase resets, email verification, magic links, and one-time codes all reuse shared Zod schemas so the client and Convex agree on every payload.
+- **🤝 Social sign-in + linking**: GitHub, Google, and Apple OAuth work out of the box once you drop in credentials, and the UI/helpers are ready for future providers. Account linking is enabled.
+- **🛡️ Security niceties**: Email OTP plugin doubles as step-up verification, passphrase helpers centralize zxcvbn + Have I Been Pwned checks through the Better Auth plugin, enforce a 16+ character policy, and drive the shared color-coded strength meter.
+- **🛠️ Scripts**: Simple one line setup and update scripts that guide you to a solid setup and ensure you are warned rather than accidentally overwriting remote envs.
+- **📊 Rate limiting + audit trails**: Better Auths built-in limiter is persisted via Convex for consistent enforcement across pods, and destructive operations (like account deletion) append structured audit logs for later review.
+- **✨ Production UX**: Sign-in/up cards are composable via variables and the application header keeps avatars and primary actions (settings + sign-out) consistent.
+- **🧩 Composable shell**: The authenticated experience is routed through a single layout so you can swap the default application without touching auth plumbing.
+- **⚙️ Settings**: A dedicated settings surface lets users edit their profile, trigger email reverification, rotate passphrases with generators + breach checks, preview the soonTM to be implemented 2FA and export data flows, and do proper, comprehensive, allencompassing account deletion.
+- **⏱️ Realtime counter sample**: Simple counter code using Convex [withOptimisticUpdate](https://docs.convex.dev/client/react/optimistic-updates), just so you have an easy way to check things are working.
+- **✉️ Email preview/dev mode**: Flip one flag to dump verification, Magic Link and Code emails to the console for testing without Resend keys.
+- **⏰ Cron Jobs**: I finally found a reason to dive into the [Cron](https://docs.convex.dev/scheduling/cron-jobs) support of Convex for temporary 24h claim of usernames during verification, so that was pretty neat.
+- **🐣 Easter Egg**: I included a small, but very nerdy easter egg for you to find. I will probably add a env soon to turn it off, alongside the 2FA and data export feature.
+
+## Why 9ui.dev
+
+9ui.dev is a curated catalog of Base UI primitives dressed with Tailwind CSS that you copy into the repo instead of installing from npm. Now, that may sound very familiar to you and yes, it uses the same principle and even the CLI employed by shadcn/ui. So why not just rely on shadcn/ui over a far newer project? Partly, because the Base UI team (which does have prior experience working on Radix Primitives (the ones used by shadcn/ui), Material UI, and Floating UI) seem to essentially use this as a new starting point, using what worked and what may not have been so successful from their prior projects, which I find very appealing, considering how many times I have redone code in my time. Mainly though, if I'm being honest, I just like being early to new stuff and learning a project so early on has its appeal. Despite their young age, 9ui.dev and Base UI are already very mature and I enjoy them thouroughly. Incedentally,it is 01:52 AM whilst I am typing these words, and I only now realised that 9ui isn't just randomly named. Yeah, I should probably go to bed soon...
+
+And yes, of course, you can easily go back to plain old shadcn/ui with Radix primitives, heck they even use the same CLI, but I'd honestly advise you to give Base UI and 9ui.dev a chance.
+
+## Why zxcvbn + Have I Been Pwned
+
+zxcvbn has been my choice because it encodes so much practical knowledge about how people actually assemble passphrases. Pairing that with Have I Been Pwned just makes sense: if the zxcvbn score tells you how resilient your passphrase might be, HIBP tells you whether the exact string has already been a part of one of the many data breaches we somehow have just come to accept. I've been following Troy Hunts work since the early 2010s (thanks to SemperVideo back in the day), long enough to see the steady stream of "why did you hack me" mails he still receives despite repeatedly explaining what the service actually does. Anyone who keeps volunteering that kind of community service in the face of persistent misunderstandings can be relied upon in my book. The fact that there is an amazingly handy HIBP plugin for Better Auth which made this basically a five line process is of course a pure coincidence...
+
+## Why Better Auth
+
+Yes, Better Auth is new and that will, worringly, always attract me to some extend, but it does help that the team really seems to have DX in mind, on top of solid defaults for security. Convex integration becoming more solid by the day, along with those plugins I mentioned before, made it comparatively straight forward, dare I say it, pleasant (a word that generally doesn't come within the same stratosphere as auth). What also helped was a Hackathon I stumbled across a few days ago (when this repo first goes public) and a lot of Sodastream Pepsi Max. Like, a medically inadvisable amount.
+
+## Stack Snapshot
+
+- React 19 with the React Compiler + Vite 7
+- Convex backend with Better Auth server plugin suite (magic link, email OTP, account linking, cross-domain)
+- Base UI primitives + Tailwind CSS v4 curtesy of 9ui.dev (under `src/components/ui`)
+- React Hook Form + Zod for synced validation, again thanks to 9ui.dev
+- Vitest + Testing Library for unit and component coverage
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 20+ and npm 10+
-- Convex CLI (installed automatically via `npm install`)
-- A Resend account (for email) or enable console previews
+- The Convex CLI (`npm install -g convex` or use `npx convex ...`) to log into your Convex account.
+- Resend API key if you want to send real mail (optional in development).
+- OTP API key if you want to use Google, Github or Apple OAuth.
 
-### Setup
+### Setup for Development
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Copy `.env.example` to `.env.local` (or your preferred local dotenv file) and fill in the required secrets. Keep `.env.example` authoritative.
-3. Run the guided setup if you need seeded configuration:
+1. Bootstrap dependencies, Convex metadata, and `.env.local` defaults:
+
    ```bash
    npm run setup
    ```
-4. Start the local stack (Vite + Convex dev servers):
+
+   This script installs all packages (`npm install`), builds the shared project and then calls `npx convex dev --once` to initialize your Convex deployment, rotates `BETTER_AUTH_SECRET` (base64) and extends `.env.local`.
+
+<details>
+  <summary>More info</summary>
+
+```bash
+# Core deployment settings used by Convex CLI and Better Auth.
+# Example: dev:team-slug-1234 (run `npx convex dev` to get your deployment slug).
+CONVEX_DEPLOYMENT=dev:team-slug-1234
+
+# Public Convex site URL (https://<deployment>.convex.site). Required for Better Auth middleware.
+# Example: https://team-slug-1234.convex.site
+CONVEX_SITE_URL=https://team-slug-1234.convex.site
+
+# Client-side Convex URL (https://<deployment>.convex.cloud) consumed by ConvexReactClient.
+# Example: https://team-slug-1234.convex.cloud
+VITE_CONVEX_URL=https://team-slug-1234.convex.cloud
+
+# Browser-accessible Convex site URL (must end in .site) used by the Better Auth client.
+# Example: https://team-slug-1234.convex.site
+VITE_CONVEX_SITE_URL=https://team-slug-1234.convex.site
+
+# Base URL for the web app during local development. Must be the origin (protocol + host + port).
+# Example: http://localhost:5173
+VITE_SITE_URL=http://localhost:5173
+
+# Server-visible site origin used for email links and trusted origins in Better Auth.
+# Example: http://localhost:5173
+SITE_URL=http://localhost:5173
+
+# 32+ character secret shared with Better Auth (generate via `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`).
+# Local dev only: keep this in `.env.local`; setup/update scripts sync it to Convex and do not read remote values back.
+BETTER_AUTH_SECRET=REPLACE_WITH_32_CHAR_SECRET
+
+# GitHub OAuth toggle. Use `true` to expose the button, `false` to hide it.
+# Example: true
+GITHUB_OAUTH=false
+
+# GitHub OAuth application client ID (letters/digits/./_/ - from https://github.com/settings/developers).
+# Example: Iv1.0123456789abcdef
+GITHUB_CLIENT_ID=
+
+# GitHub OAuth application client secret (>=10 characters from the GitHub developer portal).
+# Example: gho_exampleSuperSecret123456
+GITHUB_CLIENT_SECRET=
+
+# Google OAuth toggle. Use `true` to expose the button, `false` to hide it.
+# Example: false
+GOOGLE_OAUTH=false
+
+# Google OAuth client ID from Google Cloud console (ends with .apps.googleusercontent.com).
+# Example: 1234567890-abcdefghi123456789.apps.googleusercontent.com
+GOOGLE_CLIENT_ID=
+
+# Google OAuth client secret from Google Cloud console.
+# Example: GOCSPX-exampleSecretValue123456
+GOOGLE_CLIENT_SECRET=
+
+# Apple Sign In toggle. Use `true` to expose the button, `false` to hide it.
+# Example: false
+APPLE_OAUTH=false
+
+# Apple Sign In service identifier (Service ID / client ID from Apple Developer portal).
+# Example: com.example.yourapp.service
+APPLE_CLIENT_ID=
+
+# Apple Sign In client secret (JWT generated with your .p8 key, Key ID, and Team ID).
+# Example: eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...<truncated>
+APPLE_CLIENT_SECRET=
+
+# Optional: native app bundle identifier for Sign In with Apple when exchanging ID tokens.
+# Example: com.example.yourapp
+APPLE_APP_BUNDLE_IDENTIFIER=
+
+# Email/password auth feature toggles. Accepts true/false (case-insensitive) and defaults to true when omitted.
+# Example: true
+AUTH_PASSPHRASE_SIGN_IN=true
+AUTH_PASSPHRASE_SIGN_UP=true
+AUTH_MAGIC_LINK_SIGN_IN=true
+AUTH_VERIFICATION_CODE_SIGN_IN=true
+
+# Mail preview toggle. `true` logs emails to the console; `false` sends via Resend.
+# Example: true
+MAIL_CONSOLE_PREVIEW=true
+
+# Resend API key (required when MAIL_CONSOLE_PREVIEW=false). Starts with `re_`.
+# Example: re_abcd1234efgh5678ijkl9012mnop3456
+RESEND_API_KEY=
+
+# From address for all transactional emails. Use `Name <email@example.com>` format.
+# Example: Product Team <hello@example.com>
+MAIL_FROM=Product Team <hello@example.com>
+
+# Optional brand metadata for email templates.
+# Example: Better Auth Playground
+BRAND_NAME=
+
+# Optional brand logo URL (must start with http:// or https://).
+# Example: https://example.com/assets/logo.svg
+BRAND_LOGO_URL=
+
+# Optional brand tagline rendered in email footers.
+# Example: Secure access for modern teams.
+BRAND_TAGLINE=
+
+# Optional: toggle Better Auth's Convex-backed rate limiting. Defaults to true in production.
+# Example: true
+BETTER_AUTH_RATE_LIMIT_ENABLED=true
+```
+
+Note: Client-side values stay in `.env.local`, while server settings are mirrored into your Convex environment via `npx convex env set` so they are aligned.
+
+</details>
+
+2. Start both the frontend and Convex dev server:
+
    ```bash
    npm run dev
    ```
-   The frontend is available at `http://localhost:5173` and the Convex dashboard at `http://localhost:9876`.
 
-## Development Workflow
+   - The app now runs at `http://localhost:5173`.
+   - Re-run `npm run update-envs` whenever you tweak the .env.local to apply the same changes to your Convex deploment.
 
-- `npm run dev` — run the client and Convex dev server in parallel.
-- `npm run generate` — trigger a one-off Convex compile when schema changes (no `npx convex codegen`).
-- `npm run logs` — tail Convex logs locally.
-- `npm run check` — execute guardrails (consistency checks, type checks, linting, formatting, Vitest). `src/components/Workspace.tsx` is temporarily excluded until memory constraints are resolved.
-- `npm run audit` — run the security and secret scanning suite before shipping.
-- `npm run update-envs` — synchronize environment variables across deployment targets.
+## Adapting to Your Own App
+
+1. Swap `src/components/Counter.tsx` (wired up in `src/App.tsx`) with your own feature component or route tree.
+2. Put any shared schemas or helpers in `shared/<feature>.ts`.
+3. Build UI with primitives from `src/components/ui`.
+
+Follow these steps and you can drop in a bespoke React surface without disturbing authentication or Convex wiring.
+
+## Production Deploment using Cloudflare Pages and Resend
+
+| Cloudflare                                 | Convex                             | Mail                                   |
+| ------------------------------------------ | ---------------------------------- | -------------------------------------- |
+| ![Cloudflare](./public/CloudflareEnvs.png) | ![Convex](./public/ConvexEnvs.png) | ![Mail](./public/MailVerification.png) |
+
+These steps will guide you towards deploying this repo to production using Cloudflare Pages and Convex for mail auth, OTP, etc.
+
+1. Fork this repo and push your changes.
+
+2. In your Cloudflare Dash, go to Compute (Workers)/Workers & Pages, click on Create application, select Pages, then Connect to Git, pick your GitHub repo and the branch.
+   - Framework preset: Vite (React)
+   - Build command: `npm run build`
+   - Build output directory: `dist`.
+
+3. Next, set your domain. Under Custom domains, add your production domain (for example `app.yourdomain.com`) and finish the DNS setup so the domain becomes Active.
+
+4. In your Convex deployment, create a Production deployment for your project. You can click on the button in the browser or use the CLI, whatever floats your boat.
+   Copy both URLs:
+   - Deployment URL (ends with `.convex.cloud`)
+   - Site URL (ends with `.convex.site`)
+
+5. In your Cloudflare Pages deployment, add these variables:
+   - `VITE_CONVEX_URL` = your Convex Deployment URL (`https://...convex.cloud`)
+   - `VITE_CONVEX_SITE_URL` = your Convex Site URL (`https://...convex.site`)
+   - `VITE_SITE_URL` = your custom domain URL (`https://app.yourdomain.com`)
+   - `SITE_URL` = same as above (`https://app.yourdomain.com`)
+
+6. Create your Resend account at [https://resend.com](https://resend.com). In Resend, head to Domains, add your domain (for example `yourdomain.com`). Add the DNS records they provide at your DNS host (Cloudflare or wherever your DNS lives; if you use Cloudflare this is only one click amazingly) then wait until the domain status is shown as Verified.
+
+7. In Resend, head to API Keys, create a Production API key and copy it once, setting it to only Send and use your newly verified domain. Choose or add a sender address under your verified domain, for example `onboarding@yourdomain.com`. This exact email will be your `MAIL_FROM`.
+
+8. In your Convex prod deployment, add these server-side variables:
+
+- `RESEND_API_KEY` = your Resend production API key
+- `MAIL_FROM` = your verified address, for example `onboarding@yourdomain.com`
+- `MAIL_CONSOLE_PREVIEW` = `false`
+- `BETTER_AUTH_SECRET` = a long random string (generate one using base64; do not reuse between environments)
+
+11. Still in your Convex env vars, disable social logins you are not using by setting them to `false` (e.g. `GITHUB_OAUTH=false`, `GOOGLE_OAUTH=false`, `APPLE_OAUTH=false`), or configure them fully if you plan to use them. Use the `AUTH_*` toggles to gate passphrase, magic link, and verification code flows; they accept true/false (case-insensitive) and default to `true` when omitted.
+
+12. In the Cloudflare Pages page for your project, head to Deployments, trigger a new deployment (push a commit or click Retry deployment). Wait until the build completes.
+
+13. At your domain, run the email flow (sign up, magic link, password reset, etc.) to confirm emails are delivered. If no email arrives, recheck that your Resend domain is Verified, the `MAIL_FROM` matches that verified domain, `MAIL_CONSOLE_PREVIEW` is set to `false` and the `RESEND_API_KEY` is set in Convex Production (not in Cloudflare).
+
+14. If you have Convex issues, recheck that `VITE_CONVEX_URL` and `VITE_CONVEX_SITE_URL` in Cloudflare Pages exactly match your Convex Production URLs, and that `VITE_SITE_URL`/`SITE_URL` match your custom domain. Don't forget `https://`.
+
+### Helpful Scripts
+
+- `npm run setup` – installs all packages (`npm install`), runs `npm run generate` (builds the shared project and then calls `npx convex dev --once`) to initialize your Convex deployment, rotates `BETTER_AUTH_SECRET` (base64) and extends `.env.local`.
+- `npm run update-envs` – pushes env values to Convex without reinstalling.
+- `npm run check` – runs guardrails and the consistency checker, typechecks the entire project, enforces ESLint and Prettier, and executes Vitest with verbose reporting.
+- `npm run audit` – repeats the guardrail stack, performs Secretlint, runs gitleaks in redact mode, and triggers `npm audit` at moderate severity for production dependencies.
+
+## Environment Reference
+
+| Variable                         | Scope          | Purpose                                                                                                   |
+| -------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------- |
+| `CONVEX_DEPLOYMENT`              | Local + Convex | Links the repo to the correct Convex deployment slug so CLI commands target the right environment.        |
+| `CONVEX_SITE_URL`                | Convex         | Public `.site` domain Convex issues; Better Auth uses it for middleware callbacks.                        |
+| `VITE_CONVEX_URL`                | Local          | Browser-consumable Convex endpoint used by the client SDK for queries and mutations.                      |
+| `VITE_CONVEX_SITE_URL`           | Local          | Mirrors `CONVEX_SITE_URL` for the browser so auth flows can reach Convex-hosted routes.                   |
+| `VITE_SITE_URL`                  | Local          | Origin served by Vite during development; Better Auth uses it to craft local auth links.                  |
+| `SITE_URL`                       | Convex         | Server-visible origin for email links and CORS validation inside Convex functions.                        |
+| `BETTER_AUTH_SECRET`             | Local + Convex | Shared secret Better Auth uses to sign tokens; generated locally and synced to Convex.                    |
+| `GITHUB_OAUTH`                   | Local + Convex | Feature flag enabling the GitHub button in the Better Auth UI.                                            |
+| `GITHUB_CLIENT_ID`               | Local + Convex | GitHub OAuth application identifier consumed by the Better Auth GitHub provider.                          |
+| `GITHUB_CLIENT_SECRET`           | Convex         | Confidential GitHub secret stored server-side for token exchange.                                         |
+| `GOOGLE_OAUTH`                   | Local + Convex | Toggles the Google provider on the sign-in surface.                                                       |
+| `GOOGLE_CLIENT_ID`               | Local + Convex | Google OAuth client ID from Google Cloud; required for the Google button.                                 |
+| `GOOGLE_CLIENT_SECRET`           | Convex         | Google OAuth secret stored server-side for token exchanges.                                               |
+| `APPLE_OAUTH`                    | Local + Convex | Enables the Sign in with Apple entry point.                                                               |
+| `APPLE_CLIENT_ID`                | Local + Convex | Apple service identifier forwarded to Better Auth when Apple auth is active.                              |
+| `APPLE_CLIENT_SECRET`            | Convex         | JWT secret Apple requires for token exchange; never shipped to the browser.                               |
+| `APPLE_APP_BUNDLE_IDENTIFIER`    | Convex         | Optional native bundle identifier used when exchanging Apple ID tokens.                                   |
+| `AUTH_PASSPHRASE_SIGN_IN`        | Local + Convex | Enables the passphrase sign-in surface; accepts true/false (case-insensitive) and defaults to true.       |
+| `AUTH_PASSPHRASE_SIGN_UP`        | Local + Convex | Enables passphrase sign-up; accepts true/false (case-insensitive) and defaults to true.                   |
+| `AUTH_MAGIC_LINK_SIGN_IN`        | Local + Convex | Controls the magic link option in auth flows; accepts true/false (case-insensitive) and defaults to true. |
+| `AUTH_VERIFICATION_CODE_SIGN_IN` | Local + Convex | Toggles email verification code sign-in; accepts true/false (case-insensitive) and defaults to true.      |
+| `MAIL_CONSOLE_PREVIEW`           | Local + Convex | When true routes Better Auth mailers to console logs; disable to send via Resend.                         |
+| `RESEND_API_KEY`                 | Convex         | API key for Resend; required when mail preview is disabled.                                               |
+| `MAIL_FROM`                      | Local + Convex | Default `From` header applied to all transactional emails.                                                |
+| `BRAND_NAME`                     | Local + Convex | Optional brand label injected into email templates.                                                       |
+| `BRAND_LOGO_URL`                 | Local + Convex | Optional HTTPS logo URL rendered in email headers.                                                        |
+| `BRAND_TAGLINE`                  | Local + Convex | Optional footer copy for transactional emails.                                                            |
+| `BETTER_AUTH_RATE_LIMIT_ENABLED` | Local + Convex | Controls the Convex-backed rate limiter Better Auth ships with.                                           |
 
 ## Testing
 
-- Co-locate tests next to the implementation (`*.spec.ts[x]`); Convex tests should import the handler via `.handler`.
-- `npm run check` runs the full suite. Add targeted `vitest` runs during development when iterating quickly.
-- Workspace Vitest coverage is temporarily disabled—do not recreate `Workspace.spec.tsx` until the memory issue noted in `AGENTS.md` is resolved.
+Run `npm run check` and `npm run audit` for some simple checks (gitleak, vitest, prettier, etc.). Run both before you push or open a PR. Tests live beside the file covered (e.g. `src/features/counter/components/Counter.spec.tsx`).
 
-## Environment Variables
+## Project Layout
 
-- `.env.example` is authoritative and documents every variable with comments and sample values.
-- Update `.env.example` and relevant setup scripts in the same pull request whenever you add or rename configuration.
-- Use `npm run update-envs` to refresh remote environments without clobbering production secrets.
-
-## Documentation & References
-
-- Convex — https://www.convex.dev/llms.txt
-- Better Auth — https://www.better-auth.com/llms.txt
-- @xyflow/react — https://reactflow.dev/learn
-- 9ui / Base UI primitives — https://www.9ui.dev/llms.txt
-
-## License
-
-Hominis is distributed under the EUPL 1.2. See `LICENSE.md` for details.
+```
+BetterAuthEval/
+├── README.md
+├── components.json
+├── convex/
+│   ├── http.ts
+│   └── (Convex functions grouped by feature)
+├── public/
+│   └── screenshots and videos for readme
+├── scripts/
+│   ├── setup.mjs
+│   └── update-envs.mjs
+├── shared/
+│   └── feature-aligned Zod schemas, helpers, and types
+├── src/
+│   ├── components/
+│   ├── features/
+│   ├── routes/
+│   └── providers/
+├── package.json
+└── vite.config.ts
+```
