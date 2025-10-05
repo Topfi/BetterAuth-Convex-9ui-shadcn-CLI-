@@ -29,14 +29,8 @@ export function Protected() {
     api.settings_theme.getPreferences,
     isAuthenticated ? {} : "skip",
   );
-  const {
-    theme,
-    setTheme,
-    backgroundPattern,
-    setBackgroundPattern,
-    accent,
-    setAccent,
-  } = useTheme();
+  const { theme, setTheme, backgroundPattern, setBackgroundPattern } =
+    useTheme();
 
   useEffect(() => {
     if (themeSettings === undefined) {
@@ -52,19 +46,7 @@ export function Protected() {
     if (backgroundPattern !== nextSettings.backgroundPattern) {
       setBackgroundPattern(nextSettings.backgroundPattern);
     }
-
-    if (accent !== nextSettings.accent) {
-      setAccent(nextSettings.accent);
-    }
-  }, [
-    accent,
-    backgroundPattern,
-    setAccent,
-    setBackgroundPattern,
-    setTheme,
-    theme,
-    themeSettings,
-  ]);
+  }, [backgroundPattern, setBackgroundPattern, setTheme, theme, themeSettings]);
 
   const loadingUser = isAuthenticated && me === undefined;
   if (isLoading || loadingUser) {

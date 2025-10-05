@@ -1,16 +1,16 @@
-import { Brain } from "lucide-react";
+import { Stethoscope } from "lucide-react";
 
 import type { WorkspaceApplet } from "../types";
 import { MedFlashcardsApplet } from "./MedFlashcardsApplet";
 
 export const medFlashcardsApplet: WorkspaceApplet = {
-  id: "med_flashcards",
+  id: "medFlashcards",
   name: "Med Flashcards",
-  description: "Quick recall prompts for high-yield clinical facts.",
-  icon: Brain,
+  description: "Rapid-fire systems review built for white coat sprints.",
+  icon: Stethoscope,
   Component: MedFlashcardsApplet,
   minSize: {
-    width: 320,
-    height: 280,
+    width: 360,
+    height: 520,
   },
 };

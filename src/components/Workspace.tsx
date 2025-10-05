@@ -6,7 +6,6 @@ import {
   MiniMap,
   Panel,
   ReactFlow,
-  type NodeProps,
   type Node,
   type NodeChange,
   type NodeMouseHandler,
@@ -34,8 +33,6 @@ import {
   type ChangeEvent,
   type FormEvent,
   useCallback,
-  createContext,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -43,12 +40,6 @@ import {
 } from "react";
 
 import { api } from "../../convex/_generated/api";
-import {
-  SAMPLING_INTERVAL_MS,
-  BATCH_INTERVAL_MS,
-  type AppletTransformAction,
-  type AppletTransformBatch,
-} from "../../shared/sync";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -82,15 +73,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Toolbar, ToolbarButton, ToolbarGroup } from "@/components/ui/toolbar";
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandShortcut,
-} from "@/components/ui/command";
+import { CommandDialog } from "@/components/ui/command";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -98,17 +81,16 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { AppletNode } from "@/features/workspace/components/AppletNode";
+import { StartMenu } from "@/features/workspace/components/StartMenu";
 import {
   getWorkspaceApplet,
   settingsApplet,
   workspaceApplets,
 } from "@/features/workspace/applets/registry";
-import { SettingsLaunchProvider } from "@/features/workspace/applets/settings/SettingsLaunchProvider";
-import type {
-  SettingsLaunchCommand,
-  SettingsTabId,
-} from "@/features/workspace/applets/settings/types";
-import { buildNewAppletNode } from "@/features/workspace/createAppletNode";
+import {
+  buildNewAppletNode,
+  type NewAppletNode,
+} from "@/features/workspace/createAppletNode";
 import type { AppletNodeData } from "@/features/workspace/types";
 import {
   workspaceNameSchema,
@@ -117,11 +99,6 @@ import {
 } from "../../shared/workspace";
 import { authClient } from "@/lib/auth-client";
 import { useTheme } from "@/providers/theme-context";
-import {
-  defaultLocalizationSettings,
-  type LocalizationSettings,
-} from "@/shared/settings/localization";
-
 const DEFAULT_VIEWPORT = { x: 0, y: 0, zoom: 0.75 };
 
 type ConnectionStatus = "connected" | "disconnected";
@@ -241,9 +218,19 @@ function UserMenu({
 }
 
 function LiveTimeAndDate() {
-  const localization = useQuery(api.settings_localization.getPreferences, {});
-  const resolvedLocalization = localization ?? defaultLocalizationSettings;
   const [now, setNow] = useState(() => new Date());
+  const formatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+      }),
+    [],
+  );
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -255,7 +242,7 @@ function LiveTimeAndDate() {
     };
   }, []);
 
-  const formatted = formatToolbarClock(now, resolvedLocalization);
+  const formatted = formatter.format(now);
 
   return (
     <div
@@ -268,153 +255,6 @@ function LiveTimeAndDate() {
       {formatted}
     </div>
   );
-}
-
-function formatToolbarClock(now: Date, settings: LocalizationSettings) {
-  const timeZone =
-    settings.timeZone === "system" ? undefined : settings.timeZone;
-
-  switch (settings.timeFormat) {
-    case "dayMonthYear":
-      return formatDayMonthYear(now, timeZone);
-    case "iso8601":
-      return formatIso8601(now, timeZone);
-    case "twelveHour":
-      return formatTwelveHour(now, timeZone);
-    case "twentyFourHour":
-      return formatTwentyFourHour(now, timeZone);
-    case "system":
-    default:
-      return formatSystemDefault(now, timeZone);
-  }
-}
-
-function formatSystemDefault(now: Date, timeZone: string | undefined) {
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZone,
-  }).format(now);
-}
-
-// Animation frame utility
-function useAnimationFrame(callback: (t: number) => void, enabled = true) {
-  useEffect(() => {
-    if (!enabled) return;
-    let rafId = 0;
-    let mounted = true;
-    const loop = (t: number) => {
-      if (!mounted) return;
-      callback(t);
-      rafId = window.requestAnimationFrame(loop);
-    };
-    rafId = window.requestAnimationFrame(loop);
-    return () => {
-      mounted = false;
-      window.cancelAnimationFrame(rafId);
-    };
-  }, [callback, enabled]);
-}
-
-function formatDayMonthYear(now: Date, timeZone: string | undefined) {
-  const parts = new Intl.DateTimeFormat("de-DE", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-    timeZone,
-  }).formatToParts(now);
-
-  const day = getPartValue(parts, "day");
-  const month = getPartValue(parts, "month");
-  const year = getPartValue(parts, "year");
-  const hour = getPartValue(parts, "hour");
-  const minute = getPartValue(parts, "minute");
-  const second = getPartValue(parts, "second");
-
-  return `${day}.${month}.${year} ${hour}:${minute}:${second}`;
-}
-
-function formatIso8601(now: Date, timeZone: string | undefined) {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-    timeZone,
-  }).formatToParts(now);
-
-  const year = getPartValue(parts, "year");
-  const month = getPartValue(parts, "month");
-  const day = getPartValue(parts, "day");
-  const hour = getPartValue(parts, "hour");
-  const minute = getPartValue(parts, "minute");
-  const second = getPartValue(parts, "second");
-
-  return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
-}
-
-function formatTwelveHour(now: Date, timeZone: string | undefined) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-    timeZone,
-  }).formatToParts(now);
-
-  const hour = getPartValue(parts, "hour");
-  const minute = getPartValue(parts, "minute");
-  const second = getPartValue(parts, "second");
-  const period = getPartValue(parts, "dayPeriod");
-  const month = getPartValue(parts, "month");
-  const day = getPartValue(parts, "day");
-  const year = getPartValue(parts, "year");
-
-  return `${hour}:${minute}:${second} ${period} · ${month} ${day}, ${year}`;
-}
-
-function formatTwentyFourHour(now: Date, timeZone: string | undefined) {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-    timeZone,
-  }).formatToParts(now);
-
-  const hour = getPartValue(parts, "hour");
-  const minute = getPartValue(parts, "minute");
-  const second = getPartValue(parts, "second");
-  const day = getPartValue(parts, "day");
-  const month = getPartValue(parts, "month");
-  const year = getPartValue(parts, "year");
-
-  return `${hour}:${minute}:${second} · ${day} ${month} ${year}`;
-}
-
-function getPartValue(
-  parts: Intl.DateTimeFormatPart[],
-  type: Intl.DateTimeFormatPart["type"],
-) {
-  const part = parts.find((candidate) => candidate.type === type);
-  return part?.value ?? "";
 }
 
 function OnlineIndicator() {
@@ -463,6 +303,12 @@ type StartAppletLauncherProps = {
   onOpenChange: (open: boolean) => void;
   onOpenApplet: (appletId: string) => void;
   openApplets: ReadonlySet<string>;
+  nodes: Node<AppletNodeData>[];
+  onAddNode: (
+    node: NewAppletNode["node"],
+    persistence: NewAppletNode["persistence"],
+  ) => void;
+  onRemoveNode: (id: string) => void;
 };
 
 function StartAppletLauncher({
@@ -470,10 +316,20 @@ function StartAppletLauncher({
   onOpenChange,
   onOpenApplet,
   openApplets,
+  nodes,
+  onAddNode,
+  onRemoveNode,
 }: StartAppletLauncherProps) {
   const sortedApplets = useMemo(
     () => [...workspaceApplets].sort((a, b) => a.name.localeCompare(b.name)),
     [workspaceApplets],
+  );
+
+  const existingCount = nodes.length;
+  const nextZIndex = useMemo(
+    () =>
+      nodes.reduce((acc, current) => Math.max(acc, current.zIndex ?? 0), 0) + 1,
+    [nodes],
   );
 
   const handleLaunch = useCallback(
@@ -485,7 +341,7 @@ function StartAppletLauncher({
         return;
       }
 
-      if (openApplets.has(applet.id)) {
+      if (!applet.allowMultipleInstances && openApplets.has(applet.id)) {
         toast.warning(`"${applet.name}" is already open in this workspace.`);
         return;
       }
@@ -503,194 +359,18 @@ function StartAppletLauncher({
       title="Start applet"
       description="Launch an applet in this workspace"
     >
-      <CommandInput placeholder="Search applets" autoFocus />
-      <CommandList>
-        <CommandEmpty>No applets found.</CommandEmpty>
-        <div className="border-b px-3 pb-4 pt-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Quick launch
-          </p>
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-            {sortedApplets.map((applet) => {
-              const Icon = applet.icon;
-              const isAlreadyOpen = openApplets.has(applet.id);
-              return (
-                <Button
-                  key={applet.id}
-                  type="button"
-                  variant="outline"
-                  className={cn(
-                    "flex h-auto flex-col items-center gap-2 py-3",
-                    isAlreadyOpen &&
-                      "cursor-not-allowed opacity-60 hover:opacity-60 focus-visible:ring-0",
-                  )}
-                  aria-disabled={isAlreadyOpen}
-                  onClick={() => {
-                    if (isAlreadyOpen) {
-                      toast.warning(
-                        `"${applet.name}" is already open in this workspace.`,
-                      );
-                      return;
-                    }
-                    handleLaunch(applet.id);
-                  }}
-                >
-                  <Icon className="size-5" aria-hidden />
-                  <span className="text-xs font-medium text-foreground sm:text-sm">
-                    {applet.name}
-                  </span>
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-        <CommandGroup heading="All applets">
-          {sortedApplets.map((applet) => {
-            const Icon = applet.icon;
-            const isAlreadyOpen = openApplets.has(applet.id);
-            return (
-              <CommandItem
-                key={applet.id}
-                value={`${applet.name} ${applet.id}`}
-                onSelect={() => {
-                  if (isAlreadyOpen) {
-                    toast.warning(
-                      `"${applet.name}" is already open in this workspace.`,
-                    );
-                    return;
-                  }
-                  handleLaunch(applet.id);
-                }}
-                className={cn(
-                  isAlreadyOpen &&
-                    "cursor-not-allowed opacity-60 data-[selected=true]:opacity-60",
-                )}
-                aria-disabled={isAlreadyOpen}
-              >
-                <Icon className="size-4" aria-hidden />
-                {applet.name}
-                {isAlreadyOpen ? <CommandShortcut>Open</CommandShortcut> : null}
-              </CommandItem>
-            );
-          })}
-        </CommandGroup>
-      </CommandList>
+      <StartMenu
+        sortedApplets={sortedApplets}
+        openApplets={openApplets}
+        onSelectApplet={handleLaunch}
+        onClose={() => onOpenChange(false)}
+        addNode={onAddNode}
+        existingCount={existingCount}
+        nextZIndex={nextZIndex}
+        onRemoveNode={onRemoveNode}
+      />
     </CommandDialog>
   );
-}
-
-// Context to share workspace id and node updater with custom node components
-type WorkspaceSyncContextType = {
-  workspaceId: WorkspaceId | null;
-  setNodes: React.Dispatch<
-    React.SetStateAction<Node<AppletNodeData>[]>
-  >;
-};
-
-type WorkspaceInteractionContextType = WorkspaceSyncContextType & {
-  interactingNodeId: string | null;
-};
-
-const WorkspaceSyncContext = createContext<WorkspaceInteractionContextType | null>(
-  null,
-);
-
-// Custom node that subscribes to transform batches and replays them smoothly
-function SyncedAppletNode(props: NodeProps<AppletNodeData>) {
-  const { id } = props;
-  const sync = useContext(WorkspaceSyncContext);
-  const workspaceId = sync?.workspaceId ?? null;
-  const setNodes = sync?.setNodes;
-  const isLocallyInteracting = sync?.interactingNodeId === id;
-
-  const batchDoc = useQuery(
-    api.appletSync.find,
-    workspaceId === null ? "skip" : { workspaceId, nodeId: id },
-  );
-
-  const batchQueueRef = useRef<AppletTransformBatch[]>([]);
-  const currentBatchRef = useRef<AppletTransformBatch | null>(null);
-  const currentIndexRef = useRef(0);
-  const batchStartTimeRef = useRef<number | null>(null);
-  const lastBatchKeyRef = useRef<string | null>(null);
-
-  // Enqueue new batches when they arrive
-  useEffect(() => {
-    const actions = (batchDoc as any)?.actions as
-      | AppletTransformBatch
-      | undefined;
-    if (!actions || actions.length === 0) return;
-    const key = JSON.stringify(actions);
-    if (key === lastBatchKeyRef.current) return;
-    lastBatchKeyRef.current = key;
-    batchQueueRef.current.push(actions);
-  }, [batchDoc]);
-
-  // Playback loop
-  useAnimationFrame(
-    () => {
-      if (!setNodes) return;
-
-      if (isLocallyInteracting) {
-        // Local user is interacting with this node; skip playback.
-        return;
-      }
-
-      if (!currentBatchRef.current) {
-        const next = batchQueueRef.current.shift() ?? null;
-        if (next) {
-          currentBatchRef.current = next;
-          currentIndexRef.current = 0;
-          batchStartTimeRef.current = performance.now();
-        }
-      }
-
-      const batch = currentBatchRef.current;
-      const startedAt = batchStartTimeRef.current;
-      if (!batch || startedAt === null) return;
-
-      const elapsed = performance.now() - startedAt;
-
-      // Apply all actions whose target time has passed
-      let applied = false;
-      while (
-        currentIndexRef.current < batch.length &&
-        batch[currentIndexRef.current].timeSinceBatchStart <= elapsed
-      ) {
-        const action = batch[currentIndexRef.current];
-        setNodes((current) =>
-          current.map((node) => {
-            if (node.id !== id) return node;
-            const nextWidth = action.size.width;
-            const nextHeight = action.size.height;
-            return {
-              ...node,
-              position: { x: action.position.x, y: action.position.y },
-              zIndex: action.position.z,
-              style: {
-                ...(node.style ?? {}),
-                width: nextWidth,
-                height: nextHeight,
-              },
-              width: nextWidth,
-              height: nextHeight,
-            };
-          }),
-        );
-        currentIndexRef.current += 1;
-        applied = true;
-      }
-
-      if (applied && currentIndexRef.current >= batch.length) {
-        // Finished this batch
-        currentBatchRef.current = null;
-        batchStartTimeRef.current = null;
-      }
-    },
-    true,
-  );
-
-  return <AppletNode {...props} />;
 }
 
 export default function Workspace() {
@@ -703,17 +383,6 @@ export default function Workspace() {
     useState<WorkspaceDefinition | null>(null);
   const [isDeletingWorkspace, setIsDeletingWorkspace] = useState(false);
   const hasBootstrappedWorkspacesRef = useRef(false);
-  const [settingsLaunchCommand, setSettingsLaunchCommand] =
-    useState<SettingsLaunchCommand>(null);
-  const settingsLaunchRequestIdRef = useRef(0);
-
-  const requestSettingsTab = useCallback((tab: SettingsTabId) => {
-    settingsLaunchRequestIdRef.current += 1;
-    setSettingsLaunchCommand({
-      tab,
-      requestId: settingsLaunchRequestIdRef.current,
-    });
-  }, []);
 
   const workspaces = useQuery(api.workspace.getWorkspaces);
   const currentUser = useQuery(api.auth.getCurrentUser);
@@ -943,9 +612,6 @@ export default function Workspace() {
     useState<ReactFlowInstance | null>(null);
   const [openApplets, setOpenApplets] = useState<Set<string>>(() => new Set());
   const [isStartOpen, setIsStartOpen] = useState(false);
-  const [interactingNodeId, setInteractingNodeId] = useState<string | null>(
-    null,
-  );
   const nodesRef = useRef<Node<AppletNodeData>[]>([]);
   const lastAppliedViewportRef = useRef<{
     workspaceId: WorkspaceId;
@@ -968,7 +634,7 @@ export default function Workspace() {
       return null;
     }
 
-    const variant = backgroundPattern;
+    const variant = backgroundPattern === "cross" ? "cross" : backgroundPattern;
     const gap = backgroundPattern === "dots" ? 24 : 32;
     const size = backgroundPattern === "dots" ? 1 : 2;
 
@@ -979,7 +645,6 @@ export default function Workspace() {
   const updateWorkspaceNode = useMutation(api.workspace.updateNode);
   const removeWorkspaceNode = useMutation(api.workspace.removeNode);
   const setWorkspaceViewport = useMutation(api.workspace.setViewport);
-  const storeTransformBatch = useMutation(api.appletSync.store);
 
   useEffect(() => {
     nodesRef.current = nodes;
@@ -1007,7 +672,65 @@ export default function Workspace() {
     [createWorkspaceNode],
   );
 
-  const updateWorkspaceNodeOptimistic = updateWorkspaceNode;
+  const handleAddNode = useCallback(
+    (
+      node: NewAppletNode["node"],
+      persistence: NewAppletNode["persistence"],
+    ) => {
+      if (!activeWorkspaceId) {
+        toast.error("Select a workspace before launching an applet.");
+        return;
+      }
+
+      setNodes((current) => [...current, node]);
+      setOpenApplets((current) => {
+        const next = new Set(current);
+        const applet = getWorkspaceApplet(persistence.appletId);
+        if (!applet?.allowMultipleInstances) {
+          next.add(persistence.appletId);
+        }
+        return next;
+      });
+
+      void createWorkspaceNodeOptimistic({
+        workspaceId: activeWorkspaceId,
+        nodeId: persistence.nodeId,
+        appletId: persistence.appletId,
+        label: persistence.label,
+        position: persistence.position,
+        size: persistence.size,
+      });
+    },
+    [
+      activeWorkspaceId,
+      createWorkspaceNodeOptimistic,
+      setNodes,
+      setOpenApplets,
+    ],
+  );
+
+  const updateWorkspaceNodeOptimistic = useMemo(
+    () =>
+      updateWorkspaceNode.withOptimisticUpdate((localStore, args) => {
+        const queryArgs = { workspaceId: args.workspaceId };
+        const previous =
+          localStore.getQuery(api.workspace.getNodes, queryArgs) ?? [];
+        const updated = previous.map((node) => {
+          if (node.id !== args.nodeId) {
+            return node;
+          }
+
+          return {
+            ...node,
+            position: args.position ?? node.position,
+            size: args.size ?? node.size,
+          };
+        });
+
+        localStore.setQuery(api.workspace.getNodes, queryArgs, updated);
+      }),
+    [updateWorkspaceNode],
+  );
 
   const removeWorkspaceNodeOptimistic = useMemo(
     () =>
@@ -1025,7 +748,18 @@ export default function Workspace() {
   );
 
   // Avoid recreating the optimistic viewport mutation on every render.
-  const setWorkspaceViewportOptimistic = setWorkspaceViewport;
+  const setWorkspaceViewportOptimistic = useMemo(
+    () =>
+      setWorkspaceViewport.withOptimisticUpdate((localStore, args) => {
+        const queryArgs = { workspaceId: args.workspaceId };
+        localStore.setQuery(api.workspace.getViewport, queryArgs, {
+          workspaceId: args.workspaceId,
+          position: args.position,
+          zoom: args.zoom,
+        });
+      }),
+    [setWorkspaceViewport],
+  );
 
   const promoteNodeZIndex = useCallback(
     (nodeId: string) => {
@@ -1101,7 +835,10 @@ export default function Workspace() {
       if (targetAppletId) {
         setOpenApplets((current) => {
           const next = new Set(current);
-          next.delete(targetAppletId);
+          const applet = getWorkspaceApplet(targetAppletId);
+          if (!applet?.allowMultipleInstances) {
+            next.delete(targetAppletId);
+          }
           return next;
         });
       }
@@ -1137,100 +874,67 @@ export default function Workspace() {
       return;
     }
 
-    const interactingNodeLocalState = interactingNodeId
-      ? nodesRef.current.find((n) => n.id === interactingNodeId) ?? null
-      : null;
-
-    let serverHasCaughtUp = false;
-
     setNodes((current) => {
-      const mapped: Node<AppletNodeData>[] = persistedNodes.map(
-        (persistedNode) => {
-          if (
-            persistedNode.id === interactingNodeId &&
-            interactingNodeLocalState
-          ) {
-            const posMatch =
-              Math.abs(
-                persistedNode.position.x -
-                  interactingNodeLocalState.position.x,
-              ) < 0.1 &&
-              Math.abs(
-                persistedNode.position.y -
-                  interactingNodeLocalState.position.y,
-              ) < 0.1;
-            const sizeMatch =
-              Math.abs(
-                persistedNode.size.width -
-                  (interactingNodeLocalState.width ?? 0),
-              ) < 0.1 &&
-              Math.abs(
-                persistedNode.size.height -
-                  (interactingNodeLocalState.height ?? 0),
-              ) < 0.1;
+      const byId = new Map(current.map((node) => [node.id, node]));
 
-            if (posMatch && sizeMatch) {
-              serverHasCaughtUp = true;
-            }
+      return persistedNodes.map((node) => {
+        const applet = getWorkspaceApplet(node.appletId);
+        const label = applet?.name ?? node.label;
+        const zIndex = node.position.z ?? 0;
+        const position2d = {
+          x: node.position.x,
+          y: node.position.y,
+        } as const;
 
-            return interactingNodeLocalState;
-          }
+        const next: Node<AppletNodeData> = {
+          id: node.id,
+          type: "appletNode",
+          position: position2d,
+          data: {
+            appletId: node.appletId,
+            label,
+            onRemove: handleRemoveNode,
+          },
+          style: {
+            width: node.size.width,
+            height: node.size.height,
+          },
+          zIndex,
+          width: node.size.width,
+          height: node.size.height,
+        };
 
-          const applet = getWorkspaceApplet(persistedNode.appletId);
-          const label = applet?.name ?? persistedNode.label;
-          const zIndex = persistedNode.position.z ?? 0;
-          const position2d = {
-            x: persistedNode.position.x,
-            y: persistedNode.position.y,
-          } as const;
+        const existing = byId.get(node.id);
+        if (!existing) {
+          return next;
+        }
 
-          const base: Node<AppletNodeData> = {
-            id: persistedNode.id,
-            type: "appletNode",
-            position: position2d,
-            data: {
-              appletId: persistedNode.appletId,
-              label,
-              onRemove: handleRemoveNode,
-            },
-            style: {
-              width: persistedNode.size.width,
-              height: persistedNode.size.height,
-            },
-            zIndex,
-            width: persistedNode.size.width,
-            height: persistedNode.size.height,
-          };
-
-          const existing = current.find((n) => n.id === persistedNode.id);
-          return existing
-            ? {
-                ...existing,
-                position: base.position,
-                data: base.data,
-                style: base.style,
-                zIndex: base.zIndex,
-                width: base.width,
-                height: base.height,
-              }
-            : base;
-        },
-      );
-
-      return mapped;
+        return {
+          ...existing,
+          position: next.position,
+          data: next.data,
+          style: next.style,
+          zIndex: next.zIndex,
+          width: next.width,
+          height: next.height,
+        };
+      });
     });
-
-    if (serverHasCaughtUp) {
-      setInteractingNodeId(null);
-    }
-  }, [persistedNodes, interactingNodeId, handleRemoveNode, setNodes]);
+  }, [persistedNodes, handleRemoveNode, setNodes]);
 
   useEffect(() => {
     if (persistedNodes === undefined) {
       return;
     }
 
-    const next = new Set((persistedNodes ?? []).map((node) => node.appletId));
+    const next = new Set<string>();
+    for (const node of persistedNodes ?? []) {
+      const applet = getWorkspaceApplet(node.appletId);
+      if (applet?.allowMultipleInstances) {
+        continue;
+      }
+      next.add(node.appletId);
+    }
     setOpenApplets(next);
   }, [persistedNodes, setOpenApplets]);
 
@@ -1298,119 +1002,31 @@ export default function Workspace() {
         return;
       }
 
-      if (openApplets.has(applet.id)) {
+      if (!applet.allowMultipleInstances && openApplets.has(applet.id)) {
         toast.info(`"${applet.name}" is already open in this workspace.`);
         return;
       }
 
-      let persistence:
-        | ReturnType<typeof buildNewAppletNode>["persistence"]
-        | null = null;
+      const currentNodes = nodesRef.current;
+      const maxZ = currentNodes.reduce(
+        (acc, candidate) => Math.max(acc, candidate.zIndex ?? 0),
+        0,
+      );
+      const { node, persistence } = buildNewAppletNode(
+        applet,
+        currentNodes.length,
+        maxZ + 1,
+        handleRemoveNode,
+      );
 
-      setNodes((current) => {
-        const maxZ = current.reduce(
-          (acc, candidate) => Math.max(acc, candidate.zIndex ?? 0),
-          0,
-        );
-        const { node, persistence: details } = buildNewAppletNode(
-          applet,
-          current.length,
-          maxZ + 1,
-          handleRemoveNode,
-        );
-        persistence = details;
-        return [...current, node];
-      });
-
-      if (persistence) {
-        setOpenApplets((current) => {
-          const next = new Set(current);
-          next.add(applet.id);
-          return next;
-        });
-        void createWorkspaceNodeOptimistic({
-          workspaceId: activeWorkspaceId,
-          nodeId: persistence.nodeId,
-          appletId: persistence.appletId,
-          label: persistence.label,
-          position: persistence.position,
-          size: persistence.size,
-        });
-      }
+      handleAddNode(node, persistence);
     },
-    [
-      activeWorkspaceId,
-      createWorkspaceNodeOptimistic,
-      handleRemoveNode,
-      openApplets,
-      setOpenApplets,
-      setNodes,
-    ],
-  );
-
-  const openSettingsApplet = useCallback(
-    (tab?: SettingsTabId) => {
-      if (tab) {
-        requestSettingsTab(tab);
-      } else {
-        setSettingsLaunchCommand(null);
-      }
-      handleOpenApplet(settingsApplet.id);
-    },
-    [handleOpenApplet, requestSettingsTab, setSettingsLaunchCommand],
-  );
-
-  const handleOpenAppletFromLauncher = useCallback(
-    (appletId: string) => {
-      if (appletId === settingsApplet.id) {
-        openSettingsApplet();
-        return;
-      }
-
-      handleOpenApplet(appletId);
-    },
-    [handleOpenApplet, openSettingsApplet],
+    [handleAddNode, handleRemoveNode, openApplets],
   );
 
   const handleSignOut = useCallback(() => {
     void authClient.signOut();
   }, []);
-
-  // Batching state for applet transforms
-  const actionBatchRef = useRef<Map<string, AppletTransformBatch>>(new Map());
-  const batchStartTimeRef = useRef<Map<string, number>>(new Map());
-  const lastSampleTimeRef = useRef<Map<string, number>>(new Map());
-
-  // Periodically flush batches to the server
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      const workspaceId = activeWorkspaceId;
-      if (workspaceId === null) return;
-
-      const batches = actionBatchRef.current;
-      if (batches.size === 0) return;
-
-      // Swap refs to avoid race conditions while sending
-      actionBatchRef.current = new Map();
-      batchStartTimeRef.current = new Map();
-
-      const sends: Promise<unknown>[] = [];
-      for (const [nodeId, actions] of batches) {
-        if (!actions || actions.length === 0) continue;
-        sends.push(
-          storeTransformBatch({ workspaceId, nodeId, actions }).catch(() => {
-            // Suppress errors here; next interval can retry with new batches.
-          }),
-        );
-      }
-
-      if (sends.length > 0) {
-        void Promise.all(sends);
-      }
-    }, BATCH_INTERVAL_MS);
-
-    return () => window.clearInterval(intervalId);
-  }, [activeWorkspaceId, storeTransformBatch]);
 
   const handleNodesChange = useCallback(
     (changes: NodeChange<AppletNodeData>[]) => {
@@ -1444,62 +1060,38 @@ export default function Workspace() {
         });
       }
 
-      const now = Date.now();
       for (const change of changes) {
-        if (change.type === "position" || change.type === "dimensions") {
-          const lastSample = lastSampleTimeRef.current.get(change.id) ?? 0;
-          if (now - lastSample < SAMPLING_INTERVAL_MS) {
-            continue;
+        if (change.type === "position" && change.position) {
+          if (change.dragging === false || change.dragging === undefined) {
+            const currentNode =
+              reactFlowInstance?.getNode(change.id) ??
+              nodesRef.current.find((candidate) => candidate.id === change.id);
+            const zIndex = currentNode?.zIndex ?? 0;
+            void updateWorkspaceNodeOptimistic({
+              workspaceId: activeWorkspaceId,
+              nodeId: change.id,
+              position: {
+                x: change.position.x,
+                y: change.position.y,
+                z: zIndex,
+              },
+            });
           }
-          lastSampleTimeRef.current.set(change.id, now);
+        }
 
-          const currentNode =
-            reactFlowInstance?.getNode(change.id) ??
-            nodesRef.current.find((candidate) => candidate.id === change.id);
-          if (!currentNode) continue;
-
-          const z = currentNode.zIndex ?? 0;
-          const widthCandidate =
-            typeof (currentNode as any).width === "number"
-              ? (currentNode as any).width
-              : change.type === "dimensions" && change.dimensions
-                ? change.dimensions.width
-                : undefined;
-          const heightCandidate =
-            typeof (currentNode as any).height === "number"
-              ? (currentNode as any).height
-              : change.type === "dimensions" && change.dimensions
-                ? change.dimensions.height
-                : undefined;
-
+        if (change.type === "dimensions" && change.dimensions) {
+          const { width, height } = change.dimensions;
           if (
-            typeof currentNode.position.x !== "number" ||
-            typeof currentNode.position.y !== "number" ||
-            typeof widthCandidate !== "number" ||
-            typeof heightCandidate !== "number"
+            (change.resizing === false || change.resizing === undefined) &&
+            typeof width === "number" &&
+            typeof height === "number"
           ) {
-            continue;
+            void updateWorkspaceNodeOptimistic({
+              workspaceId: activeWorkspaceId,
+              nodeId: change.id,
+              size: { width, height },
+            });
           }
-
-          const start = batchStartTimeRef.current.get(change.id) ?? now;
-          if (!batchStartTimeRef.current.has(change.id)) {
-            batchStartTimeRef.current.set(change.id, now);
-          }
-
-          const action: AppletTransformAction = {
-            timeSinceBatchStart: now - start,
-            position: {
-              x: currentNode.position.x,
-              y: currentNode.position.y,
-              z,
-            },
-            size: { width: widthCandidate, height: heightCandidate },
-          };
-
-          const prev = actionBatchRef.current.get(change.id) ?? [];
-          prev.push(action);
-          actionBatchRef.current.set(change.id, prev);
-          continue;
         }
 
         if (change.type === "remove") {
@@ -1509,60 +1101,14 @@ export default function Workspace() {
           });
         }
       }
-
-      // Detect resize start/stop via dimensions changes and update interaction state.
-      for (const change of changes) {
-        if (change.type === "dimensions") {
-          const resizing = (change as any).resizing as boolean | undefined;
-          if (resizing === true) {
-            setInteractingNodeId(change.id);
-          } else if (resizing === false) {
-            // Capture a final transform sample at interaction end.
-            const node =
-              reactFlowInstance?.getNode(change.id) ??
-              nodesRef.current.find((n) => n.id === change.id);
-            if (node) {
-              const z = node.zIndex ?? 0;
-              const widthCandidate =
-                typeof (node as any).width === "number"
-                  ? (node as any).width
-                  : (node as any).style?.width;
-              const heightCandidate =
-                typeof (node as any).height === "number"
-                  ? (node as any).height
-                  : (node as any).style?.height;
-              if (
-                typeof node.position.x === "number" &&
-                typeof node.position.y === "number" &&
-                typeof widthCandidate === "number" &&
-                typeof heightCandidate === "number"
-              ) {
-                const start = batchStartTimeRef.current.get(change.id) ?? now;
-                if (!batchStartTimeRef.current.has(change.id)) {
-                  batchStartTimeRef.current.set(change.id, now);
-                }
-                const finalAction: AppletTransformAction = {
-                  timeSinceBatchStart: now - start,
-                  position: { x: node.position.x, y: node.position.y, z },
-                  size: { width: widthCandidate, height: heightCandidate },
-                };
-                const prev = actionBatchRef.current.get(change.id) ?? [];
-                prev.push(finalAction);
-                actionBatchRef.current.set(change.id, prev);
-              }
-            }
-            // Do not clear interactingNodeId here; it will be cleared when server catches up.
-          }
-        }
-      }
     },
     [
       activeWorkspaceId,
       applyNodeChanges,
       reactFlowInstance,
+      updateWorkspaceNodeOptimistic,
       removeWorkspaceNodeOptimistic,
       setOpenApplets,
-      SAMPLING_INTERVAL_MS,
     ],
   );
 
@@ -1576,55 +1122,8 @@ export default function Workspace() {
   const handleNodeDragStart = useCallback<OnNodeDrag<Node<AppletNodeData>>>(
     (_event, node) => {
       promoteNodeZIndex(node.id);
-      setInteractingNodeId(node.id);
     },
     [promoteNodeZIndex],
-  );
-
-  const handleNodeDragStop = useCallback<OnNodeDrag<Node<AppletNodeData>>>(
-    (_event, node) => {
-      // Capture a final transform sample at interaction end.
-      const now = Date.now();
-      const currentNode =
-        reactFlowInstance?.getNode(node.id) ??
-        nodesRef.current.find((candidate) => candidate.id === node.id);
-      if (currentNode) {
-        const z = currentNode.zIndex ?? 0;
-        const widthCandidate =
-          typeof (currentNode as any).width === "number"
-            ? (currentNode as any).width
-            : (currentNode as any).style?.width;
-        const heightCandidate =
-          typeof (currentNode as any).height === "number"
-            ? (currentNode as any).height
-            : (currentNode as any).style?.height;
-        if (
-          typeof currentNode.position.x === "number" &&
-          typeof currentNode.position.y === "number" &&
-          typeof widthCandidate === "number" &&
-          typeof heightCandidate === "number"
-        ) {
-          const start = batchStartTimeRef.current.get(node.id) ?? now;
-          if (!batchStartTimeRef.current.has(node.id)) {
-            batchStartTimeRef.current.set(node.id, now);
-          }
-          const finalAction: AppletTransformAction = {
-            timeSinceBatchStart: now - start,
-            position: {
-              x: currentNode.position.x,
-              y: currentNode.position.y,
-              z,
-            },
-            size: { width: widthCandidate, height: heightCandidate },
-          };
-          const prev = actionBatchRef.current.get(node.id) ?? [];
-          prev.push(finalAction);
-          actionBatchRef.current.set(node.id, prev);
-        }
-      }
-      // Do not clear interactingNodeId here; it will be cleared when server catches up.
-    },
-    [reactFlowInstance],
   );
 
   // Persist the latest user-controlled viewport once panning/zooming stops.
@@ -1673,7 +1172,7 @@ export default function Workspace() {
 
   const nodeTypes = useMemo(
     () => ({
-      appletNode: SyncedAppletNode,
+      appletNode: AppletNode,
     }),
     [],
   );
@@ -1698,294 +1197,286 @@ export default function Workspace() {
   }
 
   return (
-    <SettingsLaunchProvider value={settingsLaunchCommand}>
-      <div className="fixed inset-0">
-        <WorkspaceSyncContext.Provider
-          value={{ workspaceId: activeWorkspaceId, setNodes, interactingNodeId }}
-        >
-          <ReactFlow
-          aria-label="Workspace canvas"
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={handleNodesChange}
-          onEdgesChange={onEdgesChange}
-          onInit={setReactFlowInstance}
-          onMoveEnd={handleViewportCommit}
-          onNodeClick={handleNodeClick}
-          onNodeDragStart={handleNodeDragStart}
-          onNodeDragStop={handleNodeDragStop}
-          minZoom={0.1}
-          maxZoom={2}
-          defaultViewport={DEFAULT_VIEWPORT}
-          proOptions={{ hideAttribution: true }}
-          panOnDrag
-          panOnScroll
-          zoomOnScroll
-          zoomOnPinch
-          nodeTypes={nodeTypes}
-          className="bg-background text-foreground"
-        >
-          {flowBackground ? (
-            <Background
-              variant={flowBackground.variant}
-              gap={flowBackground.gap}
-              size={flowBackground.size}
-            />
-          ) : null}
-          <Controls
-            position="bottom-right"
-            showFitView={false}
-            showInteractive={false}
+    <div className="fixed inset-0">
+      <ReactFlow
+        aria-label="Workspace canvas"
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={handleNodesChange}
+        onEdgesChange={onEdgesChange}
+        onInit={setReactFlowInstance}
+        onMoveEnd={handleViewportCommit}
+        onNodeClick={handleNodeClick}
+        onNodeDragStart={handleNodeDragStart}
+        minZoom={0.1}
+        maxZoom={2}
+        defaultViewport={DEFAULT_VIEWPORT}
+        proOptions={{ hideAttribution: true }}
+        panOnDrag
+        panOnScroll
+        zoomOnScroll
+        zoomOnPinch
+        nodeTypes={nodeTypes}
+        className="bg-background text-foreground"
+      >
+        {flowBackground ? (
+          <Background
+            variant={flowBackground.variant}
+            gap={flowBackground.gap}
+            size={flowBackground.size}
           />
-          <MiniMap position="top-right" pannable zoomable />
-          <Panel position="bottom-center" className="pointer-events-auto">
-            <Toolbar
-              aria-label="Workspace toolbar"
-              className="w-full max-w-3xl"
-            >
-              <ToolbarGroup className="items-center gap-3">
-                <UserMenu
-                  currentUser={currentUser}
-                  membership={membership}
-                  onSignOut={handleSignOut}
-                  onOpenSettings={() => openSettingsApplet("profile")}
-                />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <ToolbarButton
-                      type="button"
-                      aria-label="Select workspace"
-                      className="gap-2 px-3"
-                    >
-                      {activeWorkspaceLabel}
-                      <ChevronsUpDown className="size-3" aria-hidden />
-                    </ToolbarButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="min-w-[16rem]">
-                    <DropdownMenuItem
-                      className="gap-2 font-medium"
-                      onClick={(event) => {
-                        event.preventDefault(); // 🚀 ensures Dialog open state isn't swallowed
-                        handleOpenCreateWorkspace();
-                      }}
-                    >
-                      <Plus className="size-4" aria-hidden />
-                      Add Workspace
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
-                      {workspaces === undefined ? (
-                        <DropdownMenuItem disabled>
-                          Loading workspaces…
-                        </DropdownMenuItem>
-                      ) : sortedWorkspaces.length === 0 ? (
-                        <DropdownMenuItem disabled>
-                          No workspaces yet
-                        </DropdownMenuItem>
-                      ) : (
-                        sortedWorkspaces.map((workspace) => {
-                          const isActive = workspace.id === activeWorkspaceId;
-                          return (
-                            <DropdownMenuItem
-                              key={workspace.id}
-                              role="menuitemradio"
-                              aria-checked={isActive}
-                              className={cn(
-                                "flex items-center gap-2",
-                                isActive ? "text-primary" : undefined,
-                              )}
+        ) : null}
+        <Controls
+          position="bottom-right"
+          showFitView={false}
+          showInteractive={false}
+        />
+        <MiniMap position="top-right" pannable zoomable />
+        <Panel position="bottom-center" className="pointer-events-auto">
+          <Toolbar aria-label="Workspace toolbar" className="w-full max-w-3xl">
+            <ToolbarGroup className="items-center gap-3">
+              <UserMenu
+                currentUser={currentUser}
+                membership={membership}
+                onSignOut={handleSignOut}
+                onOpenSettings={() => handleOpenApplet(settingsApplet.id)}
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <ToolbarButton
+                    type="button"
+                    aria-label="Select workspace"
+                    className="gap-2 px-3"
+                  >
+                    {activeWorkspaceLabel}
+                    <ChevronsUpDown className="size-3" aria-hidden />
+                  </ToolbarButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[16rem]">
+                  <DropdownMenuItem
+                    className="gap-2 font-medium"
+                    onClick={(event) => {
+                      event.preventDefault(); // 🚀 ensures Dialog open state isn't swallowed
+                      handleOpenCreateWorkspace();
+                    }}
+                  >
+                    <Plus className="size-4" aria-hidden />
+                    Add Workspace
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+                    {workspaces === undefined ? (
+                      <DropdownMenuItem disabled>
+                        Loading workspaces…
+                      </DropdownMenuItem>
+                    ) : sortedWorkspaces.length === 0 ? (
+                      <DropdownMenuItem disabled>
+                        No workspaces yet
+                      </DropdownMenuItem>
+                    ) : (
+                      sortedWorkspaces.map((workspace) => {
+                        const isActive = workspace.id === activeWorkspaceId;
+                        return (
+                          <DropdownMenuItem
+                            key={workspace.id}
+                            role="menuitemradio"
+                            aria-checked={isActive}
+                            className={cn(
+                              "flex items-center gap-2",
+                              isActive ? "text-primary" : undefined,
+                            )}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              handleWorkspaceSelect(workspace.id);
+                            }}
+                          >
+                            <span className="flex min-w-0 flex-1 items-center gap-2">
+                              <span className="flex size-4 items-center justify-center">
+                                {isActive ? (
+                                  <Check className="size-4" aria-hidden />
+                                ) : null}
+                              </span>
+                              <span className="truncate">{workspace.name}</span>
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              className="ml-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                               onClick={(event) => {
                                 event.preventDefault();
-                                handleWorkspaceSelect(workspace.id);
+                                event.stopPropagation();
+                                setWorkspacePendingDelete(workspace);
                               }}
+                              disabled={sortedWorkspaces.length <= 1}
                             >
-                              <span className="flex min-w-0 flex-1 items-center gap-2">
-                                <span className="flex size-4 items-center justify-center">
-                                  {isActive ? (
-                                    <Check className="size-4" aria-hidden />
-                                  ) : null}
-                                </span>
-                                <span className="truncate">
-                                  {workspace.name}
-                                </span>
+                              <Trash2 className="size-4" aria-hidden />
+                              <span className="sr-only">
+                                Delete {workspace.name}
                               </span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon-sm"
-                                className="ml-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                onClick={(event) => {
-                                  event.preventDefault();
-                                  event.stopPropagation();
-                                  setWorkspacePendingDelete(workspace);
-                                }}
-                                disabled={sortedWorkspaces.length <= 1}
-                              >
-                                <Trash2 className="size-4" aria-hidden />
-                                <span className="sr-only">
-                                  Delete {workspace.name}
-                                </span>
-                              </Button>
-                            </DropdownMenuItem>
-                          );
-                        })
-                      )}
-                    </DropdownMenuGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <ToolbarButton
-                  type="button"
-                  className="gap-2 px-3"
-                  variant="secondary"
-                  aria-label="Open the Start applet launcher"
-                  onClick={() => setIsStartOpen(true)}
-                >
-                  <Grid3x3 className="size-4" aria-hidden />
-                  Start
-                </ToolbarButton>
-                <ContextMenu>
-                  <ContextMenuTrigger className="contents">
-                    <ToolbarButton
-                      type="button"
-                      aria-label="Open settings"
-                      onClick={() => openSettingsApplet()}
-                    >
-                      <SettingsIcon className="size-4" aria-hidden />
-                    </ToolbarButton>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent align="end">
-                    <ContextMenuItem
-                      onSelect={() => {
-                        openSettingsApplet();
-                      }}
-                    >
-                      Open Settings
-                    </ContextMenuItem>
-                    <ContextMenuItem
-                      variant="destructive"
-                      disabled={!settingsNodeId}
-                      onSelect={() => {
-                        if (settingsNodeId) {
-                          handleRemoveNode(settingsNodeId);
-                        }
-                      }}
-                    >
-                      Close Settings
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
-              </ToolbarGroup>
-              <ToolbarGroup className="ml-auto items-center gap-3">
-                <OnlineIndicator />
-                <LiveTimeAndDate />
-              </ToolbarGroup>
-            </Toolbar>
-          </Panel>
-          </ReactFlow>
-        </WorkspaceSyncContext.Provider>
-        <StartAppletLauncher
-          isOpen={isStartOpen}
-          onOpenChange={setIsStartOpen}
-          onOpenApplet={handleOpenAppletFromLauncher}
-          openApplets={openApplets}
-        />
-        <Dialog
-          open={isCreateWorkspaceOpen}
-          onOpenChange={(open) => {
-            setIsCreateWorkspaceOpen(open);
-            if (!open) {
-              setNewWorkspaceName("");
-              setIsCreatingWorkspace(false);
-            }
-          }}
-        >
-          <DialogContent>
-            <form className="space-y-4" onSubmit={handleCreateWorkspaceSubmit}>
-              <DialogHeader>
-                <DialogTitle>Add workspace</DialogTitle>
-                <DialogDescription>
-                  Choose a name for the new workspace.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-2">
-                <Label htmlFor="workspace-name">Workspace name</Label>
-                <Input
-                  id="workspace-name"
-                  autoFocus
-                  autoComplete="off"
-                  value={newWorkspaceName}
-                  onChange={handleWorkspaceNameChange}
-                  placeholder={getSuggestedWorkspaceName()}
-                  disabled={isCreatingWorkspace}
-                />
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsCreateWorkspaceOpen(false);
-                    setNewWorkspaceName("");
-                    setIsCreatingWorkspace(false);
-                  }}
-                  disabled={isCreatingWorkspace}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={!isCreateWorkspaceNameValid || isCreatingWorkspace}
-                >
-                  {isCreatingWorkspace ? "Creating…" : "Create workspace"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-        <AlertDialog
-          open={workspacePendingDelete !== null}
-          onOpenChange={(open) => {
-            if (!open) {
-              setWorkspacePendingDelete(null);
-              setIsDeletingWorkspace(false);
-            }
-          }}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                Delete {workspacePendingDelete?.name}?
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                This permanently removes {workspacePendingDelete?.name} and
-                closes all running applets in that workspace.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
+                            </Button>
+                          </DropdownMenuItem>
+                        );
+                      })
+                    )}
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <ToolbarButton
+                type="button"
+                className="gap-2 px-3"
+                variant="secondary"
+                aria-label="Open the Start applet launcher"
+                onClick={() => setIsStartOpen(true)}
+              >
+                <Grid3x3 className="size-4" aria-hidden />
+                Start
+              </ToolbarButton>
+              <ContextMenu>
+                <ContextMenuTrigger className="contents">
+                  <ToolbarButton
+                    type="button"
+                    aria-label="Open settings"
+                    onClick={() => handleOpenApplet(settingsApplet.id)}
+                  >
+                    <SettingsIcon className="size-4" aria-hidden />
+                  </ToolbarButton>
+                </ContextMenuTrigger>
+                <ContextMenuContent align="end">
+                  <ContextMenuItem
+                    onSelect={() => {
+                      handleOpenApplet(settingsApplet.id);
+                    }}
+                  >
+                    Open Settings
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    variant="destructive"
+                    disabled={!settingsNodeId}
+                    onSelect={() => {
+                      if (settingsNodeId) {
+                        handleRemoveNode(settingsNodeId);
+                      }
+                    }}
+                  >
+                    Close Settings
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
+            </ToolbarGroup>
+            <ToolbarGroup className="ml-auto items-center gap-3">
+              <OnlineIndicator />
+              <LiveTimeAndDate />
+            </ToolbarGroup>
+          </Toolbar>
+        </Panel>
+      </ReactFlow>
+      <StartAppletLauncher
+        isOpen={isStartOpen}
+        onOpenChange={setIsStartOpen}
+        onOpenApplet={handleOpenApplet}
+        openApplets={openApplets}
+        nodes={nodes}
+        onAddNode={handleAddNode}
+        onRemoveNode={handleRemoveNode}
+      />
+      <Dialog
+        open={isCreateWorkspaceOpen}
+        onOpenChange={(open) => {
+          setIsCreateWorkspaceOpen(open);
+          if (!open) {
+            setNewWorkspaceName("");
+            setIsCreatingWorkspace(false);
+          }
+        }}
+      >
+        <DialogContent>
+          <form className="space-y-4" onSubmit={handleCreateWorkspaceSubmit}>
+            <DialogHeader>
+              <DialogTitle>Add workspace</DialogTitle>
+              <DialogDescription>
+                Choose a name for the new workspace. You can update it later
+                from the toolbar.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="workspace-name">Workspace name</Label>
+              <Input
+                id="workspace-name"
+                autoFocus
+                autoComplete="off"
+                value={newWorkspaceName}
+                onChange={handleWorkspaceNameChange}
+                placeholder={getSuggestedWorkspaceName()}
+                disabled={isCreatingWorkspace}
+              />
+            </div>
+            <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  setWorkspacePendingDelete(null);
-                  setIsDeletingWorkspace(false);
+                  setIsCreateWorkspaceOpen(false);
+                  setNewWorkspaceName("");
+                  setIsCreatingWorkspace(false);
                 }}
-                disabled={isDeletingWorkspace}
+                disabled={isCreatingWorkspace}
               >
                 Cancel
               </Button>
               <Button
-                type="button"
-                variant="destructive"
-                onClick={handleConfirmDeleteWorkspace}
-                disabled={isDeletingWorkspace || sortedWorkspaces.length <= 1}
+                type="submit"
+                disabled={!isCreateWorkspaceNameValid || isCreatingWorkspace}
               >
-                {isDeletingWorkspace ? "Deleting…" : "Delete workspace"}
+                {isCreatingWorkspace ? "Creating…" : "Create workspace"}
               </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
-    </SettingsLaunchProvider>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <AlertDialog
+        open={workspacePendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setWorkspacePendingDelete(null);
+            setIsDeletingWorkspace(false);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {workspacePendingDelete?.name}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes {workspacePendingDelete?.name} and closes
+              all running applets in that workspace.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setWorkspacePendingDelete(null);
+                setIsDeletingWorkspace(false);
+              }}
+              disabled={isDeletingWorkspace}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmDeleteWorkspace}
+              disabled={isDeletingWorkspace || sortedWorkspaces.length <= 1}
+            >
+              {isDeletingWorkspace ? "Deleting…" : "Delete workspace"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

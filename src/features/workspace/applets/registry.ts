@@ -1,35 +1,60 @@
-import { codingConceptsApplet } from "./codingConcepts";
+import React from "react";
+import { Bot } from "lucide-react";
+
+import {
+  GeneratedAppletRunner,
+  type GeneratedAppletId,
+} from "./generated/GeneratedAppletRunner";
 import { counterApplet } from "./counter";
-import { generatorEvalApplet } from "./generatorEval";
+import { codePracticeApplet } from "./codePractice";
+import { focusTimerApplet } from "./focusTimer";
+import { generatorApplet } from "./generator";
+import { habitTrackerApplet } from "./habitTracker";
 import { helloWorldApplet } from "./helloWorld";
 import { medFlashcardsApplet } from "./medFlashcards";
-import { generatorApplet } from "./generator";
+import { standupPrepApplet } from "./standupPrep";
 import { settingsApplet } from "./settings";
 import { studyPlannerApplet } from "./studyPlanner";
 import type { WorkspaceApplet } from "./types";
 
-const generatorAppletLegacy: WorkspaceApplet = {
-  ...generatorApplet,
-  id: "gpt5_chat",
-};
-
 const APPLETS: WorkspaceApplet[] = [
   settingsApplet,
+  helloWorldApplet,
   studyPlannerApplet,
   medFlashcardsApplet,
-  codingConceptsApplet,
-  helloWorldApplet,
-  generatorEvalApplet,
+  codePracticeApplet,
+  standupPrepApplet,
+  focusTimerApplet,
+  habitTrackerApplet,
   generatorApplet,
-  generatorAppletLegacy,
   counterApplet,
 ];
 
-const APPLET_LOOKUP = new Map(APPLETS.map((applet) => [applet.id, applet]));
+const APPLETS_MAP = new Map(APPLETS.map((applet) => [applet.id, applet]));
 
 export const workspaceApplets = APPLETS;
 
-export const getWorkspaceApplet = (id: string): WorkspaceApplet | undefined =>
-  APPLET_LOOKUP.get(id);
+export const GENERATED_PREFIX = "generated/";
 
-export { settingsApplet };
+const createGeneratedComponent = (appletId: GeneratedAppletId) => () =>
+  React.createElement(GeneratedAppletRunner, { appletId });
+
+export function getWorkspaceApplet(id: string): WorkspaceApplet | null {
+  const applet = APPLETS_MAP.get(id);
+  if (applet) return applet;
+
+  if (id.startsWith(GENERATED_PREFIX)) {
+    const appletDocId = id.slice(GENERATED_PREFIX.length) as GeneratedAppletId;
+    return {
+      id,
+      name: "Generated Applet",
+      icon: Bot,
+      minSize: { width: 360, height: 260 },
+      Component: createGeneratedComponent(appletDocId),
+    } satisfies WorkspaceApplet;
+  }
+
+  return null;
+}
+
+export { settingsApplet, generatorApplet };

@@ -8,7 +8,6 @@ import { v } from "convex/values";
 
 import {
   defaultThemeSettings,
-  sanitizeThemeSettings,
   themeSettingsSchema,
   themeSettingsUpdateSchema,
 } from "../shared/settings/theme";
@@ -37,13 +36,7 @@ export const getPreferences = query({
       return defaultThemeSettings;
     }
 
-    const parsed = themeSettingsSchema.safeParse(existing.theme);
-
-    if (parsed.success) {
-      return parsed.data;
-    }
-
-    return sanitizeThemeSettings(existing.theme);
+    return themeSettingsSchema.parse(existing.theme);
   },
 });
 
@@ -51,15 +44,10 @@ export const updatePreferences = mutation({
   args: {
     mode: v.union(v.literal("light"), v.literal("dark")),
     backgroundPattern: v.union(
+      v.literal("cross"),
       v.literal("dots"),
       v.literal("lines"),
       v.literal("none"),
-    ),
-    accent: v.union(
-      v.literal("blue"),
-      v.literal("violet"),
-      v.literal("emerald"),
-      v.literal("amber"),
     ),
   },
   handler: async (ctx, args) => {

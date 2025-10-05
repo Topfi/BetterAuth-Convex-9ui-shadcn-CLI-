@@ -37,7 +37,9 @@ export default function NotFoundPage() {
           </CardContent>
 
           <CardFooter className="flex justify-end">
-            <Button render={<Link to="/" />}>Return home</Button>
+            <Button asChild>
+              <Link to="/">Return home</Link>
+            </Button>
           </CardFooter>
         </Card>
       </div>

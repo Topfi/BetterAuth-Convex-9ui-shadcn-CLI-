@@ -79,7 +79,9 @@ export default function RootError() {
             >
               Try again
             </Button>
-            <Button render={<Link to="/" />}>Return home</Button>
+            <Button asChild>
+              <Link to="/">Return home</Link>
+            </Button>
           </CardFooter>
         </Card>
       </div>
