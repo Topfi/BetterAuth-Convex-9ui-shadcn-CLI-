@@ -189,7 +189,7 @@ export const rotatePassphrase = mutation({
     const adapter = getAdapterWithUserOperations(ctx);
     await adapter.update({
       model: "user",
-      where: [{ field: "id", operator: "eq", value: subject }],
+      where: [{ field: "_id", operator: "eq", value: subject }],
       update: {
         password: passphrase,
         updatedAt: Date.now(),

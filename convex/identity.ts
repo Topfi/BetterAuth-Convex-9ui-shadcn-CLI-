@@ -465,7 +465,7 @@ export const requestEmailChange = mutation({
 
     await adapter.update({
       model: "user",
-      where: [{ field: "id", operator: "eq", value: identity.subject }],
+      where: [{ field: "_id", operator: "eq", value: identity.subject }],
       update: {
         email: normalized.original,
         emailVerified: false,
@@ -488,7 +488,7 @@ export const updateProfileImage = mutation({
     const adapter = getAdapterWithUserOperations(ctx);
     await adapter.update({
       model: "user",
-      where: [{ field: "id", operator: "eq", value: subject }],
+      where: [{ field: "_id", operator: "eq", value: subject }],
       update: {
         image: parsed.image ?? null,
         updatedAt: Date.now(),

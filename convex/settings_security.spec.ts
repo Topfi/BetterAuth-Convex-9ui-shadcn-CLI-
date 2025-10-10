@@ -110,7 +110,7 @@ describe("rotatePassphrase", () => {
     expect(result).toEqual({ ok: true });
     expect(adapterUpdateSpy).toHaveBeenCalledWith({
       model: "user",
-      where: [{ field: "id", operator: "eq", value: "user_1" }],
+      where: [{ field: "_id", operator: "eq", value: "user_1" }],
       update: expect.objectContaining({
         password: "library-quiet-yellow-planet-92",
       }),
